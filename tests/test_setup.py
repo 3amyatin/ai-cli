@@ -292,3 +292,95 @@ def test_pull_failure_prints_error_and_exits(mock_list, _mock_pull, capsys):
     assert "failed to pull" in output.lower()
     assert "llama3" in output
     assert "network timeout" in output
+
+
+# --- RAM warning ---
+
+
+@patch("ai_cli.setup.ollama_pull")
+@patch("ai_cli.setup.ollama_list")
+def test_model_larger_than_ram_shows_warning(mock_list, mock_pull, capsys):
+    """When model download size exceeds RAM, show a warning."""
+    resp = MagicMock()
+    resp.models = []
+    mock_list.return_value = resp
+
+    progress1 = MagicMock()
+    progress1.status = "pulling manifest"
+    progress1.digest = None
+    progress1.completed = None
+    progress1.total = None
+
+    progress2 = MagicMock()
+    progress2.status = "pulling abc123"
+    progress2.digest = "sha256:abc123"
+    progress2.completed = 0
+    progress2.total = 100_000_000_000  # 100 GB
+
+    mock_pull.return_value = iter([progress1, progress2])
+
+    # First confirm = yes to download, second confirm = no to RAM warning
+    with (
+        patch("click.confirm", side_effect=[True, False]),
+        patch("ai_cli.setup.psutil") as mock_psutil,
+    ):
+        mock_psutil.virtual_memory.return_value.total = 16_000_000_000
+        with pytest.raises(SystemExit):
+            ensure_ready("huge-model")
+
+    output = capsys.readouterr().err
+    assert "ram" in output.lower() or "RAM" in output
+
+
+@patch("ai_cli.setup.ollama_pull")
+@patch("ai_cli.setup.ollama_list")
+def test_model_smaller_than_ram_no_warning(mock_list, mock_pull, capsys):
+    """When model fits in RAM, no extra warning is shown."""
+    resp = MagicMock()
+    resp.models = []
+    mock_list.return_value = resp
+
+    progress = MagicMock()
+    progress.status = "pulling abc123"
+    progress.digest = "sha256:abc123"
+    progress.completed = 4_000_000_000
+    progress.total = 4_000_000_000
+
+    mock_pull.return_value = iter([progress])
+
+    with (
+        patch("click.confirm", return_value=True),
+        patch("ai_cli.setup.psutil") as mock_psutil,
+    ):
+        mock_psutil.virtual_memory.return_value.total = 16_000_000_000
+        ensure_ready("small-model")
+
+    output = capsys.readouterr().err
+    assert "ram" not in output.lower()
+
+
+@patch("ai_cli.setup.ollama_pull")
+@patch("ai_cli.setup.ollama_list")
+def test_model_larger_than_ram_user_continues(mock_list, mock_pull):
+    """When user confirms despite RAM warning, download continues."""
+    resp = MagicMock()
+    resp.models = []
+    mock_list.return_value = resp
+
+    progress = MagicMock()
+    progress.status = "pulling abc123"
+    progress.digest = "sha256:abc123"
+    progress.completed = 100_000_000_000
+    progress.total = 100_000_000_000
+
+    mock_pull.return_value = iter([progress])
+
+    # First confirm = yes to download, second confirm = yes to RAM warning
+    with (
+        patch("click.confirm", side_effect=[True, True]),
+        patch("ai_cli.setup.psutil") as mock_psutil,
+    ):
+        mock_psutil.virtual_memory.return_value.total = 16_000_000_000
+        ensure_ready("huge-model")
+
+    mock_pull.assert_called_once()

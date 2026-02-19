@@ -4,8 +4,18 @@ import sys
 from shutil import which as shutil_which
 
 import click
+import psutil
 from ollama import list as ollama_list
 from ollama import pull as ollama_pull
+
+
+def _fmt_size(size_bytes: int | float) -> str:
+    """Format bytes as human-readable string."""
+    for unit in ("B", "KB", "MB", "GB", "TB"):
+        if size_bytes < 1024:
+            return f"{size_bytes:.1f} {unit}"
+        size_bytes /= 1024
+    return f"{size_bytes:.1f} PB"
 
 
 def ensure_ready(model: str) -> None:
@@ -53,16 +63,52 @@ def ensure_ready(model: str) -> None:
         sys.exit(1)
 
     click.secho(f"Pulling model {model}...", fg="yellow", err=True)
+    ram_total = psutil.virtual_memory().total
+    seen_digests: dict[str, int] = {}
+    ram_warned = False
+
     try:
         for progress in ollama_pull(model, stream=True):
+            # Track model size from layer digests
+            if (
+                not ram_warned
+                and progress.digest
+                and progress.total
+                and progress.digest not in seen_digests
+            ):
+                seen_digests[progress.digest] = progress.total
+                total_size = sum(seen_digests.values())
+                if total_size > ram_total:
+                    click.secho(
+                        f"\n  Warning: model is {_fmt_size(total_size)} — "
+                        f"larger than your RAM ({_fmt_size(ram_total)}).",
+                        fg="red",
+                        err=True,
+                    )
+                    if not click.confirm(
+                        "Continue downloading?", default=False, err=True
+                    ):
+                        click.secho("Aborted.", fg="red", err=True)
+                        sys.exit(1)
+                    ram_warned = True
+
+            # Progress display
             if progress.completed is not None and progress.total:
                 pct = int(progress.completed / progress.total * 100)
                 click.secho(
-                    f"\r  {progress.status}: {pct}%", fg="yellow", err=True, nl=False
+                    f"\r  {progress.status}: {pct}%",
+                    fg="yellow",
+                    err=True,
+                    nl=False,
                 )
             else:
-                click.secho(f"\r  {progress.status}", fg="yellow", err=True, nl=False)
-        click.secho("", err=True)  # newline after progress
+                click.secho(
+                    f"\r  {progress.status}",
+                    fg="yellow",
+                    err=True,
+                    nl=False,
+                )
+        click.secho("", err=True)
     except Exception as e:
         click.secho(f"\nFailed to pull model {model}: {e}", fg="red", err=True)
         sys.exit(1)
