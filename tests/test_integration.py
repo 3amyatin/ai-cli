@@ -43,7 +43,7 @@ def test_help_shows_all_options():
     assert "-v" in result.output
     assert "-m" in result.output
     assert "-M" in result.output
-    assert "--pick" in result.output
+    assert "--interactive" in result.output
 
 
 def test_verbose_flag_in_help():

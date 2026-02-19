@@ -51,7 +51,7 @@ The tool displays the generated command and asks for confirmation before executi
 - `-v` — show explanation before the command
 - `-m MODEL` — use a specific model for this run
 - `-M MODEL` — use a specific model and save it as default
-- `-p` / `--pick` — interactively pick from installed models and save as default
+- `-i` / `--interactive` — interactively pick a model and save it as default
 - `--` — separator: everything after is task text, not parsed as options
 
 ## Configuration
@@ -66,7 +66,7 @@ Environment variables:
 - `AI_MODEL` — ollama model name (overrides config file)
 - `OLLAMA_HOST` — ollama server URL (default: `http://localhost:11434`)
 
-Priority: `-m`/`-M` flag > `--pick` > `AI_MODEL` env var > config file > `qwen2.5:7b`
+Priority: `-m`/`-M` flag > `-i` > `AI_MODEL` env var > config file > `qwen2.5:7b`
 
 ## Alternative models
 

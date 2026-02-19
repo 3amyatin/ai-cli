@@ -168,8 +168,8 @@ def test_m_flag_with_value_uses_specified_model():
     assert mock_llm.call_args.kwargs.get("model") == "llama3"
 
 
-def test_pick_flag_triggers_model_picker():
-    """--pick invokes _pick_model for interactive selection."""
+def test_interactive_flag_picks_and_saves_model():
+    """--interactive invokes _pick_model and saves the choice."""
     runner = CliRunner()
     with (
         patch("ai_cli.cli.ensure_ready"),
@@ -177,7 +177,7 @@ def test_pick_flag_triggers_model_picker():
         patch("ai_cli.cli.ask_llm", return_value=LLMResponse(command="echo hi")) as mock_llm,
         patch("ai_cli.cli.save_config") as mock_save,
     ):
-        result = runner.invoke(main, ["--pick", "say", "hi"], input="n\n")
+        result = runner.invoke(main, ["--interactive", "say", "hi"], input="n\n")
 
     assert result.exit_code == 0
     mock_pick.assert_called_once()

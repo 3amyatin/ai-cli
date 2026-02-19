@@ -50,12 +50,12 @@ def _pick_model() -> str:
     help="Use a specific model and save it as the default.",
 )
 @click.option(
-    "-p",
-    "--pick",
-    "pick_model_flag",
+    "-i",
+    "--interactive",
+    "interactive",
     is_flag=True,
     default=False,
-    help="Interactively pick a model. Combine with -M to save the choice.",
+    help="Interactively pick a model and save it as default.",
 )
 @click.option("-v", "--verbose", is_flag=True, default=False, help="Show command explanation.")
 def main(
@@ -63,7 +63,7 @@ def main(
     task: tuple[str, ...],
     model_opt: str | None,
     model_save: str | None,
-    pick_model_flag: bool,
+    interactive: bool,
     verbose: bool,
 ) -> None:
     """Generate a bash command from a natural language description."""
@@ -72,14 +72,14 @@ def main(
         return
     task_str = " ".join(task)
 
-    # Resolve model: -m/-M flag > -p pick > AI_MODEL env > config > default
+    # Resolve model: -m/-M flag > -i interactive > AI_MODEL env > config > default
     save_after_ready = False
     if model_save is not None:
         model = model_save
         save_after_ready = True
     elif model_opt is not None:
         model = model_opt
-    elif pick_model_flag:
+    elif interactive:
         model = _pick_model()
         save_after_ready = True
     else:
