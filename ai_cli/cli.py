@@ -33,7 +33,7 @@ def _pick_model() -> str:
     return response.models[choice - 1].model
 
 
-@click.command()
+@click.command(options_metavar="[OPTIONS] [--]")
 @click.version_option(__version__, "--version")
 @click.pass_context
 @click.argument("task", nargs=-1)

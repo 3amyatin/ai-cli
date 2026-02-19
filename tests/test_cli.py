@@ -19,7 +19,7 @@ def test_verbose_flag_shows_model_and_prompt():
     runner = CliRunner()
     with (
         patch("ai_cli.cli.ensure_ready"),
-        patch("ai_cli.cli.ask_llm", return_value="ls -la"),
+        patch("ai_cli.cli.ask_llm", return_value=LLMResponse(command="ls -la")),
     ):
         result = runner.invoke(main, ["-v", "list", "files"], input="n\n")
 
@@ -32,7 +32,7 @@ def test_verbose_long_flag():
     runner = CliRunner()
     with (
         patch("ai_cli.cli.ensure_ready"),
-        patch("ai_cli.cli.ask_llm", return_value="ls -la"),
+        patch("ai_cli.cli.ask_llm", return_value=LLMResponse(command="ls -la")),
     ):
         result = runner.invoke(main, ["--verbose", "list", "files"], input="n\n")
 
