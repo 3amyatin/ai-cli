@@ -7,12 +7,27 @@ Describe what you need in natural language, get a bash command back.
 ## Requirements
 
 - Python 3.12+
-- [ollama](https://ollama.ai/) running locally with `qwen2.5:7b` model
+- [uv](https://docs.astral.sh/uv/) — fast Python package manager
+- [ollama](https://ollama.ai/) — local LLM runtime
 
 ## Install
 
+Install uv (if not already installed):
+
 ```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+Install ollama and pull the model:
+
+```bash
+curl -fsSL https://ollama.com/install.sh | sh
 ollama pull qwen2.5:7b
+```
+
+Install ai-cli:
+
+```bash
 uv tool install git+https://github.com/3amyatin/ai-cli
 ```
 
