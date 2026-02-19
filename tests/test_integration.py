@@ -12,7 +12,8 @@ def test_help_flag():
     assert "Generate a bash command" in result.output
 
 
-def test_no_args_shows_error():
+def test_no_args_shows_help():
     runner = CliRunner()
     result = runner.invoke(main, [])
-    assert result.exit_code != 0
+    assert result.exit_code == 0
+    assert "Generate a bash command" in result.output

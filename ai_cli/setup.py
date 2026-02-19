@@ -42,7 +42,16 @@ def ensure_ready(model: str) -> None:
     if model in installed:
         return
 
-    # Step 4: Pull the missing model
+    # Step 4: Ask user before pulling the missing model
+    click.secho(
+        f"Ollama is running, but model '{model}' is not installed.",
+        fg="yellow",
+        err=True,
+    )
+    if not click.confirm("Download it? (this may take a while)", default=True, err=True):
+        click.secho("Aborted.", fg="red", err=True)
+        sys.exit(1)
+
     click.secho(f"Pulling model {model}...", fg="yellow", err=True)
     try:
         for progress in ollama_pull(model, stream=True):

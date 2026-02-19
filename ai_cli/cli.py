@@ -11,9 +11,13 @@ from ai_cli.setup import ensure_ready
 
 
 @click.command()
-@click.argument("task", nargs=-1, required=True)
-def main(task: tuple[str, ...]) -> None:
+@click.pass_context
+@click.argument("task", nargs=-1)
+def main(ctx: click.Context, task: tuple[str, ...]) -> None:
     """Generate a bash command from a natural language description."""
+    if not task:
+        click.echo(ctx.get_help())
+        return
     task_str = " ".join(task)
     model = os.environ.get("AI_MODEL", DEFAULT_MODEL)
 

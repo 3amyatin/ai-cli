@@ -99,14 +99,47 @@ def test_model_present_no_output(mock_list, mock_pull, mock_list_response, capsy
     assert output.err == ""
 
 
-# --- Connected, model missing → auto-pull ---
+# --- Connected, model missing → confirm before pull ---
 
 
 @patch("ai_cli.setup.ollama_pull")
 @patch("ai_cli.setup.ollama_list")
-def test_model_missing_triggers_pull(mock_list, mock_pull):
+def test_model_missing_shows_confirmation_message(mock_list, mock_pull, capsys):
+    """When model is missing, user sees that ollama is running but model is not installed."""
     resp = MagicMock()
-    resp.models = []  # no models
+    resp.models = []
+    mock_list.return_value = resp
+
+    with patch("click.confirm", return_value=False):
+        with pytest.raises(SystemExit):
+            ensure_ready("llama3")
+
+    output = capsys.readouterr().err
+    assert "llama3" in output
+    assert "not installed" in output.lower()
+
+
+@patch("ai_cli.setup.ollama_pull")
+@patch("ai_cli.setup.ollama_list")
+def test_model_missing_user_declines_exits(mock_list, mock_pull):
+    """When user declines download, exit without pulling."""
+    resp = MagicMock()
+    resp.models = []
+    mock_list.return_value = resp
+
+    with patch("click.confirm", return_value=False):
+        with pytest.raises(SystemExit) as exc_info:
+            ensure_ready("llama3")
+
+    assert exc_info.value.code == 1
+    mock_pull.assert_not_called()
+
+
+@patch("ai_cli.setup.ollama_pull")
+@patch("ai_cli.setup.ollama_list")
+def test_model_missing_user_confirms_triggers_pull(mock_list, mock_pull):
+    resp = MagicMock()
+    resp.models = []
     mock_list.return_value = resp
 
     progress1 = MagicMock()
@@ -121,7 +154,8 @@ def test_model_missing_triggers_pull(mock_list, mock_pull):
 
     mock_pull.return_value = iter([progress1, progress2])
 
-    ensure_ready("llama3")
+    with patch("click.confirm", return_value=True):
+        ensure_ready("llama3")
 
     mock_pull.assert_called_once_with("llama3", stream=True)
 
@@ -139,7 +173,8 @@ def test_model_missing_prints_pulling_message(mock_list, mock_pull, capsys):
     progress.total = None
     mock_pull.return_value = iter([progress])
 
-    ensure_ready("llama3")
+    with patch("click.confirm", return_value=True):
+        ensure_ready("llama3")
 
     output = capsys.readouterr().err
     assert "llama3" in output
@@ -184,7 +219,8 @@ def test_model_not_in_list_triggers_pull(mock_list, mock_pull):
     progress.total = None
     mock_pull.return_value = iter([progress])
 
-    ensure_ready("llama3:latest")
+    with patch("click.confirm", return_value=True):
+        ensure_ready("llama3:latest")
 
     mock_pull.assert_called_once_with("llama3:latest", stream=True)
 
@@ -207,7 +243,8 @@ def test_pull_progress_with_bytes_shows_progress(mock_list, mock_pull, capsys):
 
     mock_pull.return_value = iter([progress])
 
-    ensure_ready("llama3")
+    with patch("click.confirm", return_value=True):
+        ensure_ready("llama3")
 
     output = capsys.readouterr().err
     assert "50%" in output
@@ -228,7 +265,8 @@ def test_pull_progress_without_bytes_shows_status(mock_list, mock_pull, capsys):
 
     mock_pull.return_value = iter([progress])
 
-    ensure_ready("llama3")
+    with patch("click.confirm", return_value=True):
+        ensure_ready("llama3")
 
     output = capsys.readouterr().err
     assert "verifying" in output.lower()
@@ -245,8 +283,9 @@ def test_pull_failure_prints_error_and_exits(mock_list, _mock_pull, capsys):
     resp.models = []
     mock_list.return_value = resp
 
-    with pytest.raises(SystemExit) as exc_info:
-        ensure_ready("llama3")
+    with patch("click.confirm", return_value=True):
+        with pytest.raises(SystemExit) as exc_info:
+            ensure_ready("llama3")
 
     assert exc_info.value.code == 1
     output = capsys.readouterr().err
