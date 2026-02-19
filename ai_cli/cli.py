@@ -32,13 +32,21 @@ def main(ctx: click.Context, verbose: bool, task: tuple[str, ...]) -> None:
     ensure_ready(model)
 
     try:
-        command = ask_llm(task_str, model=model)
+        if verbose:
+            result = ask_llm(task_str, model=model, verbose=True)
+            if result is None:
+                click.secho("Error: no command generated", fg="red", err=True)
+                sys.exit(1)
+            command, explanation = result
+            if explanation:
+                click.secho(f"\n  {explanation}\n", fg="cyan", err=True)
+        else:
+            command = ask_llm(task_str, model=model)
+            if not command:
+                click.secho("Error: no command generated", fg="red", err=True)
+                sys.exit(1)
     except Exception as e:
         click.secho(f"Error: {e}", fg="red", err=True)
-        sys.exit(1)
-
-    if not command:
-        click.secho("Error: no command generated", fg="red", err=True)
         sys.exit(1)
 
     click.secho(f"\n  {command}\n", fg="yellow", bold=True)

@@ -113,3 +113,38 @@ def test_handles_ollama_connection_error():
 
     assert result.exit_code == 1
     assert "error" in result.output.lower()
+
+
+def test_verbose_flag_shows_explanation():
+    runner = CliRunner()
+    with (
+        patch("ai_cli.cli.ensure_ready"),
+        patch("ai_cli.cli.ask_llm", return_value=("ls -lS", "Lists files by size")),
+    ):
+        result = runner.invoke(main, ["-v", "list", "files"], input="n\n")
+
+    assert "Lists files by size" in result.output
+    assert "ls -lS" in result.output
+
+
+def test_verbose_flag_no_explanation():
+    runner = CliRunner()
+    with (
+        patch("ai_cli.cli.ensure_ready"),
+        patch("ai_cli.cli.ask_llm", return_value=("ls -lS", None)),
+    ):
+        result = runner.invoke(main, ["-v", "list", "files"], input="n\n")
+
+    assert "ls -lS" in result.output
+
+
+def test_verbose_flag_none_response():
+    runner = CliRunner()
+    with (
+        patch("ai_cli.cli.ensure_ready"),
+        patch("ai_cli.cli.ask_llm", return_value=None),
+    ):
+        result = runner.invoke(main, ["-v", "list", "files"])
+
+    assert result.exit_code == 1
+    assert "no command" in result.output.lower() or "error" in result.output.lower()
