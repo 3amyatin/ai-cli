@@ -1,3 +1,4 @@
+import os
 from unittest.mock import patch, MagicMock
 
 from click.testing import CliRunner
@@ -148,3 +149,98 @@ def test_verbose_flag_none_response():
 
     assert result.exit_code == 1
     assert "no command" in result.output.lower() or "error" in result.output.lower()
+
+
+def test_m_flag_with_value_uses_specified_model():
+    runner = CliRunner()
+    with (
+        patch("ai_cli.cli.ensure_ready"),
+        patch("ai_cli.cli.ask_llm", return_value="echo hi") as mock_llm,
+    ):
+        result = runner.invoke(main, ["-m", "llama3", "say", "hi"], input="n\n")
+
+    assert result.exit_code == 0
+    mock_llm.assert_called_once()
+    assert mock_llm.call_args.kwargs.get("model") == "llama3"
+
+
+def test_m_flag_without_value_shows_model_picker():
+    """When -m triggers __select__ flag_value, _pick_model is called."""
+    runner = CliRunner()
+    with (
+        patch("ai_cli.cli.ensure_ready"),
+        patch("ai_cli.cli._pick_model", return_value="qwen2.5:7b") as mock_pick,
+        patch("ai_cli.cli.ask_llm", return_value="echo hi") as mock_llm,
+    ):
+        # Simulate __select__ flag_value by passing it directly
+        result = runner.invoke(main, ["-m", "__select__", "say", "hi"], input="n\n")
+
+    assert result.exit_code == 0
+    mock_pick.assert_called_once()
+    assert mock_llm.call_args.kwargs.get("model") == "qwen2.5:7b"
+
+
+def test_pick_model_lists_and_selects():
+    """_pick_model lists installed models and returns the selected one."""
+    from ai_cli.cli import _pick_model
+
+    mock_resp = MagicMock()
+    model_a = MagicMock()
+    model_a.model = "qwen2.5:7b"
+    model_a.size = 4_000_000_000
+    model_b = MagicMock()
+    model_b.model = "llama3:latest"
+    model_b.size = 5_000_000_000
+    mock_resp.models = [model_a, model_b]
+
+    with (
+        patch("ai_cli.cli.ollama_list", return_value=mock_resp),
+        patch("click.prompt", return_value=2),
+    ):
+        result = _pick_model()
+
+    assert result == "llama3:latest"
+
+
+def test_big_m_flag_saves_model_to_config():
+    runner = CliRunner()
+
+    with (
+        patch("ai_cli.cli.ensure_ready"),
+        patch("ai_cli.cli.ask_llm", return_value="echo hi"),
+        patch("ai_cli.cli.save_config") as mock_save,
+    ):
+        result = runner.invoke(main, ["-M", "llama3", "say", "hi"], input="n\n")
+
+    assert result.exit_code == 0
+    mock_save.assert_called_once_with({"model": "llama3"})
+
+
+def test_config_model_used_when_no_flags(tmp_path):
+    """Config file model is used when no -m/-M and no AI_MODEL env."""
+    runner = CliRunner()
+
+    with (
+        patch("ai_cli.cli.ensure_ready"),
+        patch("ai_cli.cli.ask_llm", return_value="echo hi") as mock_llm,
+        patch("ai_cli.cli.load_config", return_value={"model": "mistral:latest"}),
+        patch.dict(os.environ, {}, clear=True),
+    ):
+        runner.invoke(main, ["say", "hi"], input="n\n")
+
+    assert mock_llm.call_args.kwargs.get("model") == "mistral:latest"
+
+
+def test_env_var_overrides_config():
+    """AI_MODEL env var takes priority over config file."""
+    runner = CliRunner()
+
+    with (
+        patch("ai_cli.cli.ensure_ready"),
+        patch("ai_cli.cli.ask_llm", return_value="echo hi") as mock_llm,
+        patch("ai_cli.cli.load_config", return_value={"model": "mistral:latest"}),
+        patch.dict(os.environ, {"AI_MODEL": "codellama:7b"}),
+    ):
+        runner.invoke(main, ["say", "hi"], input="n\n")
+
+    assert mock_llm.call_args.kwargs.get("model") == "codellama:7b"

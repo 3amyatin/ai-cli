@@ -5,24 +5,77 @@ import subprocess
 import sys
 
 import click
+from ollama import list as ollama_list
 
 from ai_cli import __version__
+from ai_cli.config import load_config, save_config
 from ai_cli.llm import DEFAULT_MODEL, SYSTEM_PROMPT_TEMPLATE, _detect_env, ask_llm
 from ai_cli.setup import ensure_ready
 
 
+def _pick_model() -> str:
+    """List installed ollama models and let user pick one."""
+    response = ollama_list()
+    if not response.models:
+        click.secho("No models installed.", fg="red", err=True)
+        sys.exit(1)
+
+    click.secho("Installed models:", fg="cyan", err=True)
+    for i, m in enumerate(response.models, 1):
+        size_gb = m.size / (1024**3) if m.size else 0
+        click.secho(f"  {i}. {m.model} ({size_gb:.1f} GB)", err=True)
+
+    choice = click.prompt("Choose model", type=int, err=True)
+    if choice < 1 or choice > len(response.models):
+        click.secho("Invalid choice.", fg="red", err=True)
+        sys.exit(1)
+
+    return response.models[choice - 1].model
+
+
 @click.command()
 @click.version_option(__version__, "--version")
-@click.option("-v", "--verbose", is_flag=True, help="Show model name and system prompt.")
 @click.pass_context
 @click.argument("task", nargs=-1)
-def main(ctx: click.Context, verbose: bool, task: tuple[str, ...]) -> None:
+@click.option(
+    "-m",
+    "model_opt",
+    default=None,
+    is_flag=False,
+    flag_value="__select__",
+    help="Use a specific model, or pick interactively if no value given.",
+)
+@click.option(
+    "-M",
+    "model_save",
+    default=None,
+    is_flag=False,
+    flag_value="__select__",
+    help="Like -m, but also saves the choice as default.",
+)
+@click.option("-v", "--verbose", is_flag=True, default=False, help="Show command explanation.")
+def main(
+    ctx: click.Context,
+    task: tuple[str, ...],
+    model_opt: str | None,
+    model_save: str | None,
+    verbose: bool,
+) -> None:
     """Generate a bash command from a natural language description."""
     if not task:
         click.echo(ctx.get_help())
         return
     task_str = " ".join(task)
-    model = os.environ.get("AI_MODEL", DEFAULT_MODEL)
+
+    # Resolve model: -m/-M flag > AI_MODEL env > config > default
+    if model_save is not None:
+        model = _pick_model() if model_save == "__select__" else model_save
+        save_config({"model": model})
+    elif model_opt is not None:
+        model = _pick_model() if model_opt == "__select__" else model_opt
+    else:
+        config = load_config()
+        model = os.environ.get("AI_MODEL", config.get("model", DEFAULT_MODEL))
 
     if verbose:
         system_prompt = SYSTEM_PROMPT_TEMPLATE.format(**_detect_env())
