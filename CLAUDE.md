@@ -6,6 +6,7 @@ AI-powered bash command generator using ollama.
 
 - `src/ai_cli/cli.py` — click CLI entry point, confirm-and-execute flow
 - `src/ai_cli/llm.py` — ollama SDK integration
+- `src/ai_cli/setup.py` — runtime checks (ollama reachability, model availability)
 - `tests/` — pytest tests with mocked ollama calls
 
 ## Commands
