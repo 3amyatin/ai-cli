@@ -1,11 +1,13 @@
 """CLI entry point for ai command."""
 
+import os
 import subprocess
 import sys
 
 import click
 
-from ai_cli.llm import ask_llm
+from ai_cli.llm import DEFAULT_MODEL, ask_llm
+from ai_cli.setup import ensure_ready
 
 
 @click.command()
@@ -13,9 +15,12 @@ from ai_cli.llm import ask_llm
 def main(task: tuple[str, ...]) -> None:
     """Generate a bash command from a natural language description."""
     task_str = " ".join(task)
+    model = os.environ.get("AI_MODEL", DEFAULT_MODEL)
+
+    ensure_ready(model)
 
     try:
-        command = ask_llm(task_str)
+        command = ask_llm(task_str, model=model)
     except Exception as e:
         click.secho(f"Error: {e}", fg="red", err=True)
         sys.exit(1)

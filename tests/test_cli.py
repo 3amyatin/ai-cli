@@ -7,7 +7,10 @@ from ai_cli.cli import main
 
 def test_generates_and_displays_command():
     runner = CliRunner()
-    with patch("ai_cli.cli.ask_llm", return_value="ls -la /tmp"):
+    with (
+        patch("ai_cli.cli.ensure_ready"),
+        patch("ai_cli.cli.ask_llm", return_value="ls -la /tmp"),
+    ):
         result = runner.invoke(main, ["list", "files", "in", "tmp"], input="n\n")
 
     assert result.exit_code == 0
@@ -17,6 +20,7 @@ def test_generates_and_displays_command():
 def test_executes_on_confirmation():
     runner = CliRunner()
     with (
+        patch("ai_cli.cli.ensure_ready"),
         patch("ai_cli.cli.ask_llm", return_value="echo hello"),
         patch("ai_cli.cli.subprocess.run") as mock_run,
     ):
@@ -29,7 +33,10 @@ def test_executes_on_confirmation():
 
 def test_aborts_on_decline():
     runner = CliRunner()
-    with patch("ai_cli.cli.ask_llm", return_value="rm -rf /"):
+    with (
+        patch("ai_cli.cli.ensure_ready"),
+        patch("ai_cli.cli.ask_llm", return_value="rm -rf /"),
+    ):
         result = runner.invoke(main, ["delete", "everything"], input="n\n")
 
     assert result.exit_code == 0
@@ -38,7 +45,10 @@ def test_aborts_on_decline():
 
 def test_handles_empty_llm_response():
     runner = CliRunner()
-    with patch("ai_cli.cli.ask_llm", return_value=None):
+    with (
+        patch("ai_cli.cli.ensure_ready"),
+        patch("ai_cli.cli.ask_llm", return_value=None),
+    ):
         result = runner.invoke(main, ["do", "something"])
 
     assert result.exit_code == 1
@@ -47,7 +57,10 @@ def test_handles_empty_llm_response():
 
 def test_handles_ollama_connection_error():
     runner = CliRunner()
-    with patch("ai_cli.cli.ask_llm", side_effect=Exception("Connection refused")):
+    with (
+        patch("ai_cli.cli.ensure_ready"),
+        patch("ai_cli.cli.ask_llm", side_effect=Exception("Connection refused")),
+    ):
         result = runner.invoke(main, ["do", "something"])
 
     assert result.exit_code == 1
