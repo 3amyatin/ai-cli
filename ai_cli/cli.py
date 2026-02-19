@@ -43,7 +43,7 @@ def main(ctx: click.Context, verbose: bool, task: tuple[str, ...]) -> None:
 
     click.secho(f"\n  {command}\n", fg="yellow", bold=True)
 
-    if click.confirm("Execute?", default=False):
+    if click.confirm("Execute?", default=True):
         result = subprocess.run(command, shell=True)
         sys.exit(result.returncode)
     else:

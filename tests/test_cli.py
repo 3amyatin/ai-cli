@@ -88,6 +88,21 @@ def test_handles_empty_llm_response():
     assert "no command" in result.output.lower() or "error" in result.output.lower()
 
 
+def test_execute_default_is_yes():
+    """Pressing Enter without input should execute the command."""
+    runner = CliRunner()
+    with (
+        patch("ai_cli.cli.ensure_ready"),
+        patch("ai_cli.cli.ask_llm", return_value="echo test"),
+        patch("ai_cli.cli.subprocess.run") as mock_run,
+    ):
+        mock_run.return_value = MagicMock(returncode=0)
+        result = runner.invoke(main, ["test"], input="\n")
+
+    assert result.exit_code == 0
+    mock_run.assert_called_once()
+
+
 def test_handles_ollama_connection_error():
     runner = CliRunner()
     with (
