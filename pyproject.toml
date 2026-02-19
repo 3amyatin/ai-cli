@@ -2,6 +2,7 @@
 name = "ai-cli"
 version = "0.1.0"
 description = "AI-powered bash command generator using ollama"
+license = "MIT"
 requires-python = ">=3.12"
 dependencies = [
     "ollama",
