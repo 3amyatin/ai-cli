@@ -257,6 +257,36 @@ def test_config_model_used_when_no_flags(tmp_path):
     assert mock_llm.call_args.kwargs.get("model") == "mistral:latest"
 
 
+def test_interactive_flag_without_task_saves_and_exits():
+    """ai -i (no task) picks model, saves it, and exits without error."""
+    runner = CliRunner()
+    with (
+        patch("ai_cli.cli.ensure_ready"),
+        patch("ai_cli.cli._pick_model", return_value="llama3:latest") as mock_pick,
+        patch("ai_cli.cli.save_config") as mock_save,
+    ):
+        result = runner.invoke(main, ["-i"])
+
+    assert result.exit_code == 0
+    mock_pick.assert_called_once()
+    mock_save.assert_called_once_with({"model": "llama3:latest"})
+    assert "llama3:latest" in result.output
+
+
+def test_big_m_flag_without_task_saves_and_exits():
+    """ai -M model (no task) saves model and exits without error."""
+    runner = CliRunner()
+    with (
+        patch("ai_cli.cli.ensure_ready"),
+        patch("ai_cli.cli.save_config") as mock_save,
+    ):
+        result = runner.invoke(main, ["-M", "mistral:latest"])
+
+    assert result.exit_code == 0
+    mock_save.assert_called_once_with({"model": "mistral:latest"})
+    assert "mistral:latest" in result.output
+
+
 def test_env_var_overrides_config():
     """AI_MODEL env var takes priority over config file."""
     runner = CliRunner()

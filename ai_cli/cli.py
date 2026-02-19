@@ -71,11 +71,6 @@ def main(
     verbose: bool,
 ) -> None:
     """Generate a bash command from a natural language description."""
-    if not task:
-        click.echo(ctx.get_help())
-        return
-    task_str = " ".join(task)
-
     # Resolve model: -m/-M flag > -i interactive > AI_MODEL env > config > default
     save_after_ready = False
     if model_save is not None:
@@ -89,6 +84,16 @@ def main(
     else:
         config = load_config()
         model = os.environ.get("AI_MODEL", config.get("model", DEFAULT_MODEL))
+
+    if not task:
+        if save_after_ready:
+            ensure_ready(model)
+            save_config({"model": model})
+            click.secho(f"Default model set to: {model}", fg="green", err=True)
+        else:
+            click.echo(ctx.get_help())
+        return
+    task_str = " ".join(task)
 
     ensure_ready(model)
 

@@ -1,5 +1,9 @@
 # ai-cli task runner
 
+# list available recipes
+default:
+    @just --list
+
 # run the CLI with arguments
 run *ARGS:
     uv run ai {{ARGS}}
