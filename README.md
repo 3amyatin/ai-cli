@@ -18,17 +18,22 @@ Install uv (if not already installed):
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-Install ollama and pull the model:
+Install ollama (the model will be downloaded on first run):
 
 ```bash
 curl -fsSL https://ollama.com/install.sh | sh
-ollama pull qwen2.5:7b
 ```
 
 Install ai-cli:
 
 ```bash
 uv tool install git+https://github.com/3amyatin/ai-cli
+```
+
+To upgrade to the latest version:
+
+```bash
+uv tool install --force git+https://github.com/3amyatin/ai-cli
 ```
 
 ## Usage
@@ -53,7 +58,6 @@ The default model is `qwen2.5:7b`, but you can use any [coding model](https://ol
 To switch the model:
 
 ```bash
-ollama pull codellama:7b
 AI_MODEL=codellama:7b ai find large files in home directory
 ```
 
@@ -70,5 +74,5 @@ git clone https://github.com/3amyatin/ai-cli
 cd ai-cli
 uv sync
 uv run pytest
-uv run ruff check src/ tests/
+uv run ruff check ai_cli/ tests/
 ```
