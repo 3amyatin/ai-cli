@@ -14,6 +14,6 @@ jobs:
 
       - uses: astral-sh/setup-uv@v5
 
-      - run: uv run ruff check src/ tests/
+      - run: uv run ruff check ai_cli/ tests/
 
       - run: uv run pytest tests/ -v
