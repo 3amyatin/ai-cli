@@ -65,6 +65,7 @@ def ensure_ready(model: str) -> None:
     click.secho(f"Pulling model {model}...", fg="yellow", err=True)
     ram_total = psutil.virtual_memory().total
     seen_digests: dict[str, int] = {}
+    total_size = 0
     ram_warned = False
 
     try:
@@ -77,7 +78,7 @@ def ensure_ready(model: str) -> None:
                 and progress.digest not in seen_digests
             ):
                 seen_digests[progress.digest] = progress.total
-                total_size = sum(seen_digests.values())
+                total_size += progress.total
                 if total_size > ram_total:
                     click.secho(
                         f"\n  Warning: model is {_fmt_size(total_size)} — "

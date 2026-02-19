@@ -5,6 +5,7 @@ from unittest.mock import patch
 from click.testing import CliRunner
 
 from ai_cli.cli import main
+from ai_cli.llm import LLMResponse
 
 
 def test_help_flag():
@@ -26,7 +27,7 @@ def test_double_dash_separates_options_from_task():
     runner = CliRunner()
     with (
         patch("ai_cli.cli.ensure_ready"),
-        patch("ai_cli.cli.ask_llm", return_value="echo hi") as mock_llm,
+        patch("ai_cli.cli.ask_llm", return_value=LLMResponse(command="echo hi")) as mock_llm,
     ):
         runner.invoke(main, ["--", "-v", "list", "files"], input="n\n")
 
@@ -42,6 +43,7 @@ def test_help_shows_all_options():
     assert "-v" in result.output
     assert "-m" in result.output
     assert "-M" in result.output
+    assert "--pick" in result.output
 
 
 def test_verbose_flag_in_help():

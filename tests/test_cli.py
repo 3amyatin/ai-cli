@@ -5,6 +5,7 @@ from click.testing import CliRunner
 
 from ai_cli import __version__
 from ai_cli.cli import main
+from ai_cli.llm import LLMResponse
 
 
 def test_version_flag():
@@ -43,7 +44,7 @@ def test_generates_and_displays_command():
     runner = CliRunner()
     with (
         patch("ai_cli.cli.ensure_ready"),
-        patch("ai_cli.cli.ask_llm", return_value="ls -la /tmp"),
+        patch("ai_cli.cli.ask_llm", return_value=LLMResponse(command="ls -la /tmp")),
     ):
         result = runner.invoke(main, ["list", "files", "in", "tmp"], input="n\n")
 
@@ -55,7 +56,7 @@ def test_executes_on_confirmation():
     runner = CliRunner()
     with (
         patch("ai_cli.cli.ensure_ready"),
-        patch("ai_cli.cli.ask_llm", return_value="echo hello"),
+        patch("ai_cli.cli.ask_llm", return_value=LLMResponse(command="echo hello")),
         patch("ai_cli.cli.subprocess.run") as mock_run,
     ):
         mock_run.return_value = MagicMock(returncode=0)
@@ -69,7 +70,7 @@ def test_aborts_on_decline():
     runner = CliRunner()
     with (
         patch("ai_cli.cli.ensure_ready"),
-        patch("ai_cli.cli.ask_llm", return_value="rm -rf /"),
+        patch("ai_cli.cli.ask_llm", return_value=LLMResponse(command="rm -rf /")),
     ):
         result = runner.invoke(main, ["delete", "everything"], input="n\n")
 
@@ -94,7 +95,7 @@ def test_execute_default_is_yes():
     runner = CliRunner()
     with (
         patch("ai_cli.cli.ensure_ready"),
-        patch("ai_cli.cli.ask_llm", return_value="echo test"),
+        patch("ai_cli.cli.ask_llm", return_value=LLMResponse(command="echo test")),
         patch("ai_cli.cli.subprocess.run") as mock_run,
     ):
         mock_run.return_value = MagicMock(returncode=0)
@@ -120,7 +121,10 @@ def test_verbose_flag_shows_explanation():
     runner = CliRunner()
     with (
         patch("ai_cli.cli.ensure_ready"),
-        patch("ai_cli.cli.ask_llm", return_value=("ls -lS", "Lists files by size")),
+        patch(
+            "ai_cli.cli.ask_llm",
+            return_value=LLMResponse(command="ls -lS", explanation="Lists files by size"),
+        ),
     ):
         result = runner.invoke(main, ["-v", "list", "files"], input="n\n")
 
@@ -132,7 +136,7 @@ def test_verbose_flag_no_explanation():
     runner = CliRunner()
     with (
         patch("ai_cli.cli.ensure_ready"),
-        patch("ai_cli.cli.ask_llm", return_value=("ls -lS", None)),
+        patch("ai_cli.cli.ask_llm", return_value=LLMResponse(command="ls -lS")),
     ):
         result = runner.invoke(main, ["-v", "list", "files"], input="n\n")
 
@@ -155,7 +159,7 @@ def test_m_flag_with_value_uses_specified_model():
     runner = CliRunner()
     with (
         patch("ai_cli.cli.ensure_ready"),
-        patch("ai_cli.cli.ask_llm", return_value="echo hi") as mock_llm,
+        patch("ai_cli.cli.ask_llm", return_value=LLMResponse(command="echo hi")) as mock_llm,
     ):
         result = runner.invoke(main, ["-m", "llama3", "say", "hi"], input="n\n")
 
@@ -164,20 +168,21 @@ def test_m_flag_with_value_uses_specified_model():
     assert mock_llm.call_args.kwargs.get("model") == "llama3"
 
 
-def test_m_flag_without_value_shows_model_picker():
-    """When -m triggers __select__ flag_value, _pick_model is called."""
+def test_pick_flag_triggers_model_picker():
+    """--pick invokes _pick_model for interactive selection."""
     runner = CliRunner()
     with (
         patch("ai_cli.cli.ensure_ready"),
         patch("ai_cli.cli._pick_model", return_value="qwen2.5:7b") as mock_pick,
-        patch("ai_cli.cli.ask_llm", return_value="echo hi") as mock_llm,
+        patch("ai_cli.cli.ask_llm", return_value=LLMResponse(command="echo hi")) as mock_llm,
+        patch("ai_cli.cli.save_config") as mock_save,
     ):
-        # Simulate __select__ flag_value by passing it directly
-        result = runner.invoke(main, ["-m", "__select__", "say", "hi"], input="n\n")
+        result = runner.invoke(main, ["--pick", "say", "hi"], input="n\n")
 
     assert result.exit_code == 0
     mock_pick.assert_called_once()
     assert mock_llm.call_args.kwargs.get("model") == "qwen2.5:7b"
+    mock_save.assert_called_once_with({"model": "qwen2.5:7b"})
 
 
 def test_pick_model_lists_and_selects():
@@ -202,18 +207,39 @@ def test_pick_model_lists_and_selects():
     assert result == "llama3:latest"
 
 
-def test_big_m_flag_saves_model_to_config():
+def test_big_m_flag_saves_model_after_ensure_ready():
+    """Model is saved to config only after ensure_ready succeeds."""
     runner = CliRunner()
+    call_order = []
+
+    def track_ensure_ready(model):
+        call_order.append("ensure_ready")
+
+    def track_save_config(data):
+        call_order.append("save_config")
 
     with (
-        patch("ai_cli.cli.ensure_ready"),
-        patch("ai_cli.cli.ask_llm", return_value="echo hi"),
-        patch("ai_cli.cli.save_config") as mock_save,
+        patch("ai_cli.cli.ensure_ready", side_effect=track_ensure_ready),
+        patch("ai_cli.cli.ask_llm", return_value=LLMResponse(command="echo hi")),
+        patch("ai_cli.cli.save_config", side_effect=track_save_config),
     ):
         result = runner.invoke(main, ["-M", "llama3", "say", "hi"], input="n\n")
 
     assert result.exit_code == 0
-    mock_save.assert_called_once_with({"model": "llama3"})
+    assert call_order == ["ensure_ready", "save_config"]
+
+
+def test_big_m_flag_does_not_save_if_ensure_ready_fails():
+    """If ensure_ready exits, model is NOT saved to config."""
+    runner = CliRunner()
+    with (
+        patch("ai_cli.cli.ensure_ready", side_effect=SystemExit(1)),
+        patch("ai_cli.cli.save_config") as mock_save,
+    ):
+        result = runner.invoke(main, ["-M", "bad-model", "say", "hi"])
+
+    assert result.exit_code == 1
+    mock_save.assert_not_called()
 
 
 def test_config_model_used_when_no_flags(tmp_path):
@@ -222,7 +248,7 @@ def test_config_model_used_when_no_flags(tmp_path):
 
     with (
         patch("ai_cli.cli.ensure_ready"),
-        patch("ai_cli.cli.ask_llm", return_value="echo hi") as mock_llm,
+        patch("ai_cli.cli.ask_llm", return_value=LLMResponse(command="echo hi")) as mock_llm,
         patch("ai_cli.cli.load_config", return_value={"model": "mistral:latest"}),
         patch.dict(os.environ, {}, clear=True),
     ):
@@ -237,7 +263,7 @@ def test_env_var_overrides_config():
 
     with (
         patch("ai_cli.cli.ensure_ready"),
-        patch("ai_cli.cli.ask_llm", return_value="echo hi") as mock_llm,
+        patch("ai_cli.cli.ask_llm", return_value=LLMResponse(command="echo hi")) as mock_llm,
         patch("ai_cli.cli.load_config", return_value={"model": "mistral:latest"}),
         patch.dict(os.environ, {"AI_MODEL": "codellama:7b"}),
     ):

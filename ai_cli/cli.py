@@ -41,17 +41,21 @@ def _pick_model() -> str:
     "-m",
     "model_opt",
     default=None,
-    is_flag=False,
-    flag_value="__select__",
-    help="Use a specific model, or pick interactively if no value given.",
+    help="Use a specific model for this run.",
 )
 @click.option(
     "-M",
     "model_save",
     default=None,
-    is_flag=False,
-    flag_value="__select__",
-    help="Like -m, but also saves the choice as default.",
+    help="Use a specific model and save it as the default.",
+)
+@click.option(
+    "-p",
+    "--pick",
+    "pick_model_flag",
+    is_flag=True,
+    default=False,
+    help="Interactively pick a model. Combine with -M to save the choice.",
 )
 @click.option("-v", "--verbose", is_flag=True, default=False, help="Show command explanation.")
 def main(
@@ -59,6 +63,7 @@ def main(
     task: tuple[str, ...],
     model_opt: str | None,
     model_save: str | None,
+    pick_model_flag: bool,
     verbose: bool,
 ) -> None:
     """Generate a bash command from a natural language description."""
@@ -67,12 +72,16 @@ def main(
         return
     task_str = " ".join(task)
 
-    # Resolve model: -m/-M flag > AI_MODEL env > config > default
+    # Resolve model: -m/-M flag > -p pick > AI_MODEL env > config > default
+    save_after_ready = False
     if model_save is not None:
-        model = _pick_model() if model_save == "__select__" else model_save
-        save_config({"model": model})
+        model = model_save
+        save_after_ready = True
     elif model_opt is not None:
-        model = _pick_model() if model_opt == "__select__" else model_opt
+        model = model_opt
+    elif pick_model_flag:
+        model = _pick_model()
+        save_after_ready = True
     else:
         config = load_config()
         model = os.environ.get("AI_MODEL", config.get("model", DEFAULT_MODEL))
@@ -84,20 +93,17 @@ def main(
 
     ensure_ready(model)
 
+    if save_after_ready:
+        save_config({"model": model})
+
     try:
-        if verbose:
-            result = ask_llm(task_str, model=model, verbose=True)
-            if result is None:
-                click.secho("Error: no command generated", fg="red", err=True)
-                sys.exit(1)
-            command, explanation = result
-            if explanation:
-                click.secho(f"\n  {explanation}\n", fg="cyan", err=True)
-        else:
-            command = ask_llm(task_str, model=model)
-            if not command:
-                click.secho("Error: no command generated", fg="red", err=True)
-                sys.exit(1)
+        result = ask_llm(task_str, model=model, verbose=verbose)
+        if result is None:
+            click.secho("Error: no command generated", fg="red", err=True)
+            sys.exit(1)
+        command = result.command
+        if verbose and result.explanation:
+            click.secho(f"\n  {result.explanation}\n", fg="cyan", err=True)
     except Exception as e:
         click.secho(f"Error: {e}", fg="red", err=True)
         sys.exit(1)

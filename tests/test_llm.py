@@ -2,7 +2,7 @@
 
 from unittest.mock import MagicMock, patch
 
-from ai_cli.llm import _detect_env, _parse_verbose_response, ask_llm
+from ai_cli.llm import LLMResponse, _detect_env, _parse_verbose_response, ask_llm
 
 
 def test_detect_env_returns_os_arch_shell():
@@ -27,7 +27,9 @@ def test_ask_llm_returns_command():
     with patch("ai_cli.llm.chat", return_value=mock_response) as mock_chat:
         result = ask_llm("list files in tmp")
 
-    assert result == "ls -la /tmp"
+    assert result == LLMResponse(command="ls -la /tmp")
+    assert result.command == "ls -la /tmp"
+    assert result.explanation is None
     mock_chat.assert_called_once()
     call_kwargs = mock_chat.call_args
     assert call_kwargs.kwargs["model"] == "qwen2.5:7b"
@@ -57,7 +59,7 @@ def test_ask_llm_strips_markdown_backticks():
     with patch("ai_cli.llm.chat", return_value=mock_response):
         result = ask_llm("list files")
 
-    assert result == "ls -la"
+    assert result.command == "ls -la"
 
 
 def test_ask_llm_custom_model():
@@ -68,7 +70,7 @@ def test_ask_llm_custom_model():
         result = ask_llm("say hello", model="llama3")
 
     assert mock_chat.call_args.kwargs["model"] == "llama3"
-    assert result == "echo hello"
+    assert result.command == "echo hello"
 
 
 def test_ask_llm_empty_response():
@@ -82,23 +84,31 @@ def test_ask_llm_empty_response():
 
 
 def test_parse_verbose_response_with_markers():
-    command, explanation = _parse_verbose_response(
+    result = _parse_verbose_response(
         "EXPLANATION: Lists files sorted by size\nCOMMAND: ls -lS /tmp"
     )
-    assert command == "ls -lS /tmp"
-    assert explanation == "Lists files sorted by size"
+    assert result == LLMResponse(command="ls -lS /tmp", explanation="Lists files sorted by size")
 
 
 def test_parse_verbose_response_without_markers():
-    command, explanation = _parse_verbose_response("ls -lS /tmp")
-    assert command == "ls -lS /tmp"
-    assert explanation is None
+    result = _parse_verbose_response("ls -lS /tmp")
+    assert result.command == "ls -lS /tmp"
+    assert result.explanation is None
 
 
 def test_parse_verbose_response_strips_markdown():
-    command, explanation = _parse_verbose_response("```bash\nls -la\n```")
-    assert command == "ls -la"
-    assert explanation is None
+    result = _parse_verbose_response("```bash\nls -la\n```")
+    assert result.command == "ls -la"
+    assert result.explanation is None
+
+
+def test_parse_verbose_response_multiline_explanation():
+    result = _parse_verbose_response(
+        "EXPLANATION: This lists files\nsorted by size in reverse order\nCOMMAND: ls -lSr /tmp"
+    )
+    assert result.command == "ls -lSr /tmp"
+    assert "lists files" in result.explanation
+    assert "sorted by size" in result.explanation
 
 
 def test_ask_llm_verbose_returns_explanation_and_command():
@@ -110,7 +120,7 @@ def test_ask_llm_verbose_returns_explanation_and_command():
     with patch("ai_cli.llm.chat", return_value=mock_response):
         result = ask_llm("list files by size", verbose=True)
 
-    assert result == ("ls -lS /tmp", "Lists files sorted by size")
+    assert result == LLMResponse(command="ls -lS /tmp", explanation="Lists files sorted by size")
 
 
 def test_ask_llm_verbose_fallback_when_no_markers():
@@ -121,7 +131,7 @@ def test_ask_llm_verbose_fallback_when_no_markers():
     with patch("ai_cli.llm.chat", return_value=mock_response):
         result = ask_llm("list files by size", verbose=True)
 
-    assert result == ("ls -lS /tmp", None)
+    assert result == LLMResponse(command="ls -lS /tmp")
 
 
 def test_ask_llm_verbose_uses_different_system_prompt():
