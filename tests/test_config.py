@@ -37,6 +37,13 @@ def test_save_config_preserves_existing_keys(tmp_path):
     assert data["custom_key"] == "value"
 
 
+def test_load_config_malformed_toml_returns_empty_dict(tmp_path):
+    path = tmp_path / "config.toml"
+    path.write_text("this is not valid [[[ toml")
+    config = load_config(path)
+    assert config == {}
+
+
 def test_config_path_is_xdg():
     assert ".config" in str(CONFIG_PATH)
     assert str(CONFIG_PATH).endswith("config.toml")

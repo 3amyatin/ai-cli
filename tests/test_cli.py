@@ -15,19 +15,6 @@ def test_version_flag():
     assert __version__ in result.output
 
 
-def test_verbose_flag_shows_model_and_prompt():
-    runner = CliRunner()
-    with (
-        patch("ai_cli.cli.ensure_ready"),
-        patch("ai_cli.cli.ask_llm", return_value=LLMResponse(command="ls -la")),
-    ):
-        result = runner.invoke(main, ["-v", "list", "files"], input="n\n")
-
-    assert result.exit_code == 0
-    assert "Model:" in result.output
-    assert "System:" in result.output
-
-
 def test_verbose_long_flag():
     runner = CliRunner()
     with (
@@ -37,7 +24,7 @@ def test_verbose_long_flag():
         result = runner.invoke(main, ["--verbose", "list", "files"], input="n\n")
 
     assert result.exit_code == 0
-    assert "Model:" in result.output
+    assert "ls -la" in result.output
 
 
 def test_generates_and_displays_command():
@@ -183,6 +170,19 @@ def test_interactive_flag_picks_and_saves_model():
     mock_pick.assert_called_once()
     assert mock_llm.call_args.kwargs.get("model") == "qwen2.5:7b"
     mock_save.assert_called_once_with({"model": "qwen2.5:7b"})
+
+
+def test_pick_model_connection_error():
+    """_pick_model exits gracefully when ollama is not reachable."""
+    from ai_cli.cli import _pick_model
+
+    with patch("ai_cli.cli.ollama_list", side_effect=ConnectionError("refused")):
+        import pytest
+
+        with pytest.raises(SystemExit) as exc_info:
+            _pick_model()
+
+    assert exc_info.value.code == 1
 
 
 def test_pick_model_lists_and_selects():

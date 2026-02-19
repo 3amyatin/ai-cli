@@ -9,11 +9,14 @@ CONFIG_PATH = Path.home() / ".config" / "ai-cli" / "config.toml"
 
 
 def load_config(path: Path = CONFIG_PATH) -> dict:
-    """Load config from TOML file. Returns empty dict if file doesn't exist."""
+    """Load config from TOML file. Returns empty dict if file doesn't exist or is invalid."""
     if not path.exists():
         return {}
-    with open(path, "rb") as f:
-        return tomllib.load(f)
+    try:
+        with open(path, "rb") as f:
+            return tomllib.load(f)
+    except tomllib.TOMLDecodeError:
+        return {}
 
 
 def save_config(updates: dict, path: Path = CONFIG_PATH) -> None:

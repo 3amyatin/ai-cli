@@ -44,6 +44,13 @@ def _detect_env() -> dict[str, str]:
     }
 
 
+def _strip_markdown_fences(text: str) -> str:
+    """Remove markdown code fences wrapping a command."""
+    text = re.sub(r"^```(?:\w*)\n?", "", text)
+    text = re.sub(r"\n?```$", "", text)
+    return text.strip()
+
+
 def _parse_verbose_response(content: str) -> LLMResponse:
     """Parse EXPLANATION/COMMAND format. Fallback: treat whole content as command."""
     explanation_lines: list[str] = []
@@ -67,10 +74,8 @@ def _parse_verbose_response(content: str) -> LLMResponse:
 
     explanation = "\n".join(explanation_lines).strip() or None
 
-    # Strip markdown fences from command
-    command = re.sub(r"^```(?:\w*)\n?", "", command)
-    command = re.sub(r"\n?```$", "", command)
-    return LLMResponse(command=command.strip(), explanation=explanation)
+    command = _strip_markdown_fences(command)
+    return LLMResponse(command=command, explanation=explanation)
 
 
 def ask_llm(
@@ -96,7 +101,4 @@ def ask_llm(
     if verbose:
         return _parse_verbose_response(content)
 
-    # Strip markdown code fences if LLM ignores instructions
-    content = re.sub(r"^```(?:\w*)\n?", "", content)
-    content = re.sub(r"\n?```$", "", content)
-    return LLMResponse(command=content.strip())
+    return LLMResponse(command=_strip_markdown_fences(content))

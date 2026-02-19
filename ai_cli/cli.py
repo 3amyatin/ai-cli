@@ -9,13 +9,17 @@ from ollama import list as ollama_list
 
 from ai_cli import __version__
 from ai_cli.config import load_config, save_config
-from ai_cli.llm import DEFAULT_MODEL, SYSTEM_PROMPT_TEMPLATE, _detect_env, ask_llm
+from ai_cli.llm import DEFAULT_MODEL, ask_llm
 from ai_cli.setup import ensure_ready
 
 
 def _pick_model() -> str:
     """List installed ollama models and let user pick one."""
-    response = ollama_list()
+    try:
+        response = ollama_list()
+    except ConnectionError:
+        click.secho("Cannot reach ollama. Start it with: ollama serve", fg="red", err=True)
+        sys.exit(1)
     if not response.models:
         click.secho("No models installed.", fg="red", err=True)
         sys.exit(1)
@@ -85,11 +89,6 @@ def main(
     else:
         config = load_config()
         model = os.environ.get("AI_MODEL", config.get("model", DEFAULT_MODEL))
-
-    if verbose:
-        system_prompt = SYSTEM_PROMPT_TEMPLATE.format(**_detect_env())
-        click.secho(f"Model: {model}", fg="cyan", err=True)
-        click.secho(f"System: {system_prompt}", fg="cyan", err=True)
 
     ensure_ready(model)
 
