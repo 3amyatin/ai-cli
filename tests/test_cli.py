@@ -2,7 +2,40 @@ from unittest.mock import patch, MagicMock
 
 from click.testing import CliRunner
 
+from ai_cli import __version__
 from ai_cli.cli import main
+
+
+def test_version_flag():
+    runner = CliRunner()
+    result = runner.invoke(main, ["--version"])
+    assert result.exit_code == 0
+    assert __version__ in result.output
+
+
+def test_verbose_flag_shows_model_and_prompt():
+    runner = CliRunner()
+    with (
+        patch("ai_cli.cli.ensure_ready"),
+        patch("ai_cli.cli.ask_llm", return_value="ls -la"),
+    ):
+        result = runner.invoke(main, ["-v", "list", "files"], input="n\n")
+
+    assert result.exit_code == 0
+    assert "Model:" in result.output
+    assert "System:" in result.output
+
+
+def test_verbose_long_flag():
+    runner = CliRunner()
+    with (
+        patch("ai_cli.cli.ensure_ready"),
+        patch("ai_cli.cli.ask_llm", return_value="ls -la"),
+    ):
+        result = runner.invoke(main, ["--verbose", "list", "files"], input="n\n")
+
+    assert result.exit_code == 0
+    assert "Model:" in result.output
 
 
 def test_generates_and_displays_command():

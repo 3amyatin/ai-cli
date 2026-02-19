@@ -33,7 +33,7 @@ uv tool install git+https://github.com/3amyatin/ai-cli
 To upgrade to the latest version:
 
 ```bash
-uv tool install --force git+https://github.com/3amyatin/ai-cli
+uv tool upgrade ai-cli
 ```
 
 ## Usage
@@ -75,4 +75,10 @@ cd ai-cli
 uv sync
 uv run pytest
 uv run ruff check ai_cli/ tests/
+```
+
+Install as editable package (for local development):
+
+```bash
+uv tool install --editable /path/to/your/ai-cli
 ```

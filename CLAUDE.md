@@ -2,6 +2,8 @@
 
 AI-powered bash command generator using ollama.
 
+Version: 0.2.0
+
 ## Structure
 
 - `ai_cli/cli.py` — click CLI entry point, confirm-and-execute flow

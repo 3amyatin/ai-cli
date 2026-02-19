@@ -6,20 +6,28 @@ import sys
 
 import click
 
-from ai_cli.llm import DEFAULT_MODEL, ask_llm
+from ai_cli import __version__
+from ai_cli.llm import DEFAULT_MODEL, SYSTEM_PROMPT_TEMPLATE, _detect_env, ask_llm
 from ai_cli.setup import ensure_ready
 
 
 @click.command()
+@click.version_option(__version__, "--version")
+@click.option("-v", "--verbose", is_flag=True, help="Show model name and system prompt.")
 @click.pass_context
 @click.argument("task", nargs=-1)
-def main(ctx: click.Context, task: tuple[str, ...]) -> None:
+def main(ctx: click.Context, verbose: bool, task: tuple[str, ...]) -> None:
     """Generate a bash command from a natural language description."""
     if not task:
         click.echo(ctx.get_help())
         return
     task_str = " ".join(task)
     model = os.environ.get("AI_MODEL", DEFAULT_MODEL)
+
+    if verbose:
+        system_prompt = SYSTEM_PROMPT_TEMPLATE.format(**_detect_env())
+        click.secho(f"Model: {model}", fg="cyan", err=True)
+        click.secho(f"System: {system_prompt}", fg="cyan", err=True)
 
     ensure_ready(model)
 
