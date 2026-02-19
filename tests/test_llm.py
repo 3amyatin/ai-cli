@@ -2,7 +2,22 @@
 
 from unittest.mock import MagicMock, patch
 
-from ai_cli.llm import ask_llm
+from ai_cli.llm import _detect_env, ask_llm
+
+
+def test_detect_env_returns_os_arch_shell():
+    env = _detect_env()
+    assert "os" in env
+    assert "arch" in env
+    assert "shell" in env
+    assert env["os"]  # non-empty
+    assert env["shell"]  # non-empty
+
+
+def test_detect_env_reads_shell_from_env():
+    with patch.dict("os.environ", {"SHELL": "/opt/homebrew/bin/fish"}):
+        env = _detect_env()
+    assert env["shell"] == "fish"
 
 
 def test_ask_llm_returns_command():
@@ -20,6 +35,19 @@ def test_ask_llm_returns_command():
     assert messages[0]["role"] == "system"
     assert messages[1]["role"] == "user"
     assert messages[1]["content"] == "list files in tmp"
+
+
+def test_ask_llm_system_prompt_includes_env():
+    mock_response = MagicMock()
+    mock_response.message.content = "echo hi"
+
+    with patch("ai_cli.llm.chat", return_value=mock_response) as mock_chat:
+        ask_llm("say hi")
+
+    system_msg = mock_chat.call_args.kwargs["messages"][0]["content"]
+    env = _detect_env()
+    assert env["os"] in system_msg
+    assert env["shell"] in system_msg
 
 
 def test_ask_llm_strips_markdown_backticks():
