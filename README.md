@@ -1,6 +1,9 @@
 # ai-cli
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/3amyatin/ai-cli)
+[![CI](https://img.shields.io/github/actions/workflow/status/3amyatin/ai-cli/ci.yml?branch=main)](https://github.com/3amyatin/ai-cli/actions)
+[![License: MIT](https://img.shields.io/github/license/3amyatin/ai-cli)](https://github.com/3amyatin/ai-cli/blob/main/LICENSE)
+[![Python](https://img.shields.io/badge/python-≥3.12-blue)](https://github.com/3amyatin/ai-cli)
 
 AI-powered bash command generator using ollama.
 
