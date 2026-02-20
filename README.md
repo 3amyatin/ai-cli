@@ -1,5 +1,7 @@
 # ai-cli
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/3amyatin/ai-cli)
+
 AI-powered bash command generator using ollama.
 
 Describe what you need in natural language, get a bash command back.
