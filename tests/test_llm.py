@@ -10,8 +10,11 @@ def test_detect_env_returns_os_arch_shell():
     assert "os" in env
     assert "arch" in env
     assert "shell" in env
+    assert "env_context" in env
     assert env["os"]  # non-empty
     assert env["shell"]  # non-empty
+    assert "Working directory" in env["env_context"]
+    assert "Home" in env["env_context"]
 
 
 def test_detect_env_reads_shell_from_env():

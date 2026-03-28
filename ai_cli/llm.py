@@ -3,6 +3,7 @@
 import os
 import platform
 import re
+import shutil
 from typing import NamedTuple
 
 from ollama import chat
@@ -17,6 +18,7 @@ class LLMResponse(NamedTuple):
 SYSTEM_PROMPT_TEMPLATE = (
     "You are a terminal assistant. "
     "The user's system: {os} ({arch}), shell: {shell}. "
+    "{env_context}"
     "Answer ONLY with a shell command for this system — single line. "
     "No explanations, no markdown, no backticks."
 )
@@ -24,6 +26,7 @@ SYSTEM_PROMPT_TEMPLATE = (
 VERBOSE_SYSTEM_PROMPT_TEMPLATE = (
     "You are a terminal assistant. "
     "The user's system: {os} ({arch}), shell: {shell}. "
+    "{env_context}"
     "First explain briefly what the command does, then give the command. "
     "Format your response exactly as:\n"
     "EXPLANATION: <brief explanation>\n"
@@ -35,12 +38,26 @@ DEFAULT_MODEL = "glm-5:cloud"
 
 
 def _detect_env() -> dict[str, str]:
-    """Detect OS, architecture, and shell."""
+    """Detect OS, architecture, shell, and available tools."""
     shell = os.path.basename(os.environ.get("SHELL", "sh"))
+    tools = []
+    if shutil.which("brew"):
+        tools.append("Homebrew")
+    if shutil.which("uv"):
+        tools.append("uv")
+    if shutil.which("docker"):
+        tools.append("Docker")
+    cwd = os.getcwd()
+    home = os.path.expanduser("~")
+    env_parts = []
+    if tools:
+        env_parts.append(f"Available tools: {', '.join(tools)}. ")
+    env_parts.append(f"Working directory: {cwd}. Home: {home}. ")
     return {
         "os": platform.system(),
         "arch": platform.machine(),
         "shell": shell,
+        "env_context": "".join(env_parts),
     }
 
 
