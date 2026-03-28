@@ -65,7 +65,10 @@ Settings are stored in `~/.config/ai-cli/config.toml`:
 
 ```toml
 model = "glm-5:cloud"
+context = "Projects: ~/Documents/dev/. Server: d1.example.com (Docker, SSH). Python: use uv."
 ```
+
+The `context` field adds custom environment info to the LLM prompt, so it can generate commands tailored to your setup (server names, project paths, tool preferences).
 
 Environment variables:
 - `AI_MODEL` — ollama model name (overrides config file)

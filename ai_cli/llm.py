@@ -8,6 +8,8 @@ from typing import NamedTuple
 
 from ollama import chat
 
+from ai_cli.config import load_config
+
 
 class LLMResponse(NamedTuple):
     """Structured response from the LLM."""
@@ -53,6 +55,9 @@ def _detect_env() -> dict[str, str]:
     if tools:
         env_parts.append(f"Available tools: {', '.join(tools)}. ")
     env_parts.append(f"Working directory: {cwd}. Home: {home}. ")
+    user_context = load_config().get("context", "")
+    if user_context:
+        env_parts.append(f"{user_context} ")
     return {
         "os": platform.system(),
         "arch": platform.machine(),
