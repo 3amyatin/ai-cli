@@ -4,6 +4,16 @@ AI-powered bash command generator using ollama.
 
 Version: 0.2.0
 
+## How it works
+
+1. User describes a task in natural language: `ai find large files`
+2. CLI sends prompt to an ollama model (local or cloud)
+3. Model returns a bash command (and explanation with `-v`)
+4. CLI shows the command and asks for confirmation before executing
+
+Supports both local and [cloud-hosted](https://ollama.com/search?c=cloud) ollama models.
+Setup check handles implicit `:latest` tag (e.g. `gemini-3-flash-preview` matches `gemini-3-flash-preview:latest`).
+
 ## Structure
 
 - `ai_cli/__init__.py` — package version
@@ -12,13 +22,6 @@ Version: 0.2.0
 - `ai_cli/config.py` — persistent config (~/.config/ai-cli/config.toml)
 - `ai_cli/setup.py` — runtime checks (ollama reachability, model availability, RAM warning)
 - `tests/` — pytest tests with mocked ollama calls
-
-## Commands
-
-- Test: `uv run pytest`
-- Lint: `uv run ruff check ai_cli/ tests/`
-- Format: `uv run ruff format ai_cli/ tests/`
-- Install as tool: `uv tool install -e .`
 
 ## CLI flags
 
@@ -34,3 +37,18 @@ Version: 0.2.0
 - Settings file: `~/.config/ai-cli/config.toml`
 - Priority: `-m`/`-M` flag > `-i` > `AI_MODEL` env var > config file > `qwen2.5:7b`
 - `OLLAMA_HOST` env var (default: `http://localhost:11434`)
+
+## Development
+
+The tool is installed as an editable uv tool (`uv tool install -e .`), so the `ai` command links directly to source code in this directory. Code changes take effect immediately.
+
+Commands (via justfile):
+
+- `just test` — run pytest
+- `just lint` — ruff check
+- `just fmt` — ruff format
+- `just check` — lint + format
+- `just fix` — auto-fix lint issues
+- `just run <args>` — run the CLI via uv
+- `just update` — upgrade and sync dependencies
+- `just install` — reinstall as editable uv tool

@@ -99,6 +99,23 @@ def test_model_present_no_output(mock_list, mock_pull, mock_list_response, capsy
     assert output.err == ""
 
 
+# --- Connected, model matched via implicit :latest suffix ---
+
+
+@patch("ai_cli.setup.ollama_pull")
+@patch("ai_cli.setup.ollama_list")
+def test_model_without_tag_matches_latest(mock_list, mock_pull):
+    model = MagicMock()
+    model.model = "gemini-3-flash-preview:latest"
+    resp = MagicMock()
+    resp.models = [model]
+    mock_list.return_value = resp
+
+    ensure_ready("gemini-3-flash-preview")
+
+    mock_pull.assert_not_called()
+
+
 # --- Connected, model missing → confirm before pull ---
 
 

@@ -51,6 +51,9 @@ def ensure_ready(model: str) -> None:
     installed = {m.model for m in response.models}
     if model in installed:
         return
+    # Handle implicit :latest tag (e.g. "gemini-3-flash-preview" matches "gemini-3-flash-preview:latest")
+    if ":" not in model and f"{model}:latest" in installed:
+        return
 
     # Step 4: Ask user before pulling the missing model
     click.secho(

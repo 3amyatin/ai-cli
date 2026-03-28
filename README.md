@@ -75,13 +75,28 @@ Priority: `-m`/`-M` flag > `-i` > `AI_MODEL` env var > config file > `qwen2.5:7b
 
 ## Alternative models
 
-The default model is `qwen2.5:7b`, but you can use any [coding model](https://ollama.com/search?q=coding) available in ollama. There are also [cloud-hosted models](https://ollama.com/search?c=cloud&q=coding) that don't require local GPU.
+The default model is `qwen2.5:7b`, but you can use any model available in ollama — both [local](https://ollama.com/search?q=coding) and [cloud-hosted](https://ollama.com/search?c=cloud) (no local GPU required).
 
-To switch the model:
+To switch the model for one run:
 
 ```bash
-AI_MODEL=codellama:7b ai find large files in home directory
+ai -m gemini-3-flash-preview find large files in home directory
 ```
+
+To switch and save as default:
+
+```bash
+ai -M glm-5:cloud find large files in home directory
+```
+
+Cloud models tested with ai-cli (March 2026):
+
+| Model | Avg latency | Notes |
+|-------|-------------|-------|
+| `qwen2.5:7b` (local, default) | ~2s | fast, consistent |
+| `gemini-3-flash-preview` (cloud) | ~3s | fast, occasional artifacts |
+| `glm-5:cloud` | 2-21s | good quality, inconsistent latency |
+| `qwen3.5:cloud` | ~19s | good quality, slow |
 
 To find the best local model for your hardware, try [llm-checker](https://github.com/Pavelevich/llm-checker):
 
@@ -89,18 +104,49 @@ To find the best local model for your hardware, try [llm-checker](https://github
 uvx llm-checker
 ```
 
+## How it works
+
+1. You describe a task in natural language: `ai find large files in home directory`
+2. The CLI sends your prompt to an ollama model (local or cloud)
+3. The model returns a bash command (and optionally an explanation with `-v`)
+4. The CLI shows the command and asks for confirmation before executing
+
+Limitations:
+- Requires a running ollama instance (local or remote via `OLLAMA_HOST`)
+- Output quality depends on the chosen model and prompt clarity
+- Generated commands target the detected shell — may need adaptation for other shells
+- Cloud model latency depends on network and provider load
+
 ## Development
+
+Clone and set up the dev environment:
 
 ```bash
 git clone https://github.com/3amyatin/ai-cli
 cd ai-cli
 uv sync
-uv run pytest
-uv run ruff check ai_cli/ tests/
 ```
 
-Install as editable package (for local development):
+Install as editable uv tool — the `ai` command links directly to your source code, so any code changes take effect immediately without reinstalling:
 
 ```bash
-uv tool install --editable /path/to/your/ai-cli
+uv tool install -e .
+```
+
+Run tests and lint:
+
+```bash
+just test        # or: uv run pytest
+just lint        # or: uv run ruff check ai_cli/ tests/
+just fmt         # or: uv run ruff format ai_cli/ tests/
+just check       # lint + format
+```
+
+Other useful recipes:
+
+```bash
+just             # list all available recipes
+just run <args>  # run the CLI via uv (e.g., just run -v list files)
+just update      # upgrade and sync dependencies
+just fix         # auto-fix lint issues
 ```
