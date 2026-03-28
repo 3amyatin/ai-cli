@@ -49,7 +49,7 @@ ai compress directory into tar.gz
 ai find all python files modified today
 ```
 
-The tool displays the generated command and asks for confirmation before executing.
+The tool displays the generated command and prompts: **[E]xecute** (run it), **[C]opy** (copy to clipboard), or **[A]bort**.
 
 ## Options
 

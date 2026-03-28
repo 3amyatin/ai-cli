@@ -114,8 +114,17 @@ def main(
 
     click.secho(f"\n  {command}\n", fg="yellow", bold=True)
 
-    if click.confirm("Execute?", default=True):
+    choice = click.prompt(
+        "[E]xecute / [C]opy / [A]bort",
+        type=click.Choice(["e", "c", "a"], case_sensitive=False),
+        default="e",
+        show_choices=False,
+    )
+    if choice == "e":
         result = subprocess.run(command, shell=True)
         sys.exit(result.returncode)
+    elif choice == "c":
+        subprocess.run(["pbcopy"], input=command.encode(), check=True)
+        click.secho("Copied to clipboard.", fg="green")
     else:
         click.echo("Aborted.")

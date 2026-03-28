@@ -21,7 +21,7 @@ def test_verbose_long_flag():
         patch("ai_cli.cli.ensure_ready"),
         patch("ai_cli.cli.ask_llm", return_value=LLMResponse(command="ls -la")),
     ):
-        result = runner.invoke(main, ["--verbose", "list", "files"], input="n\n")
+        result = runner.invoke(main, ["--verbose", "list", "files"], input="a\n")
 
     assert result.exit_code == 0
     assert "ls -la" in result.output
@@ -33,7 +33,7 @@ def test_generates_and_displays_command():
         patch("ai_cli.cli.ensure_ready"),
         patch("ai_cli.cli.ask_llm", return_value=LLMResponse(command="ls -la /tmp")),
     ):
-        result = runner.invoke(main, ["list", "files", "in", "tmp"], input="n\n")
+        result = runner.invoke(main, ["list", "files", "in", "tmp"], input="a\n")
 
     assert result.exit_code == 0
     assert "ls -la /tmp" in result.output
@@ -47,10 +47,10 @@ def test_executes_on_confirmation():
         patch("ai_cli.cli.subprocess.run") as mock_run,
     ):
         mock_run.return_value = MagicMock(returncode=0)
-        result = runner.invoke(main, ["say", "hello"], input="y\n")
+        result = runner.invoke(main, ["say", "hello"], input="e\n")
 
     assert result.exit_code == 0
-    mock_run.assert_called_once()
+    mock_run.assert_called_once_with("echo hello", shell=True)
 
 
 def test_aborts_on_decline():
@@ -59,10 +59,10 @@ def test_aborts_on_decline():
         patch("ai_cli.cli.ensure_ready"),
         patch("ai_cli.cli.ask_llm", return_value=LLMResponse(command="rm -rf /")),
     ):
-        result = runner.invoke(main, ["delete", "everything"], input="n\n")
+        result = runner.invoke(main, ["delete", "everything"], input="a\n")
 
     assert result.exit_code == 0
-    assert "Aborted" in result.output or "abort" in result.output.lower()
+    assert "Aborted" in result.output
 
 
 def test_handles_empty_llm_response():
@@ -77,8 +77,8 @@ def test_handles_empty_llm_response():
     assert "no command" in result.output.lower() or "error" in result.output.lower()
 
 
-def test_execute_default_is_yes():
-    """Pressing Enter without input should execute the command."""
+def test_execute_default_is_execute():
+    """Pressing Enter without input should execute the command (default=e)."""
     runner = CliRunner()
     with (
         patch("ai_cli.cli.ensure_ready"),
@@ -89,7 +89,22 @@ def test_execute_default_is_yes():
         result = runner.invoke(main, ["test"], input="\n")
 
     assert result.exit_code == 0
-    mock_run.assert_called_once()
+    mock_run.assert_called_once_with("echo test", shell=True)
+
+
+def test_copy_to_clipboard():
+    runner = CliRunner()
+    with (
+        patch("ai_cli.cli.ensure_ready"),
+        patch("ai_cli.cli.ask_llm", return_value=LLMResponse(command="find . -name '*.py'")),
+        patch("ai_cli.cli.subprocess.run") as mock_run,
+    ):
+        mock_run.return_value = MagicMock(returncode=0)
+        result = runner.invoke(main, ["find", "python", "files"], input="c\n")
+
+    assert result.exit_code == 0
+    assert "Copied" in result.output
+    mock_run.assert_called_once_with(["pbcopy"], input=b"find . -name '*.py'", check=True)
 
 
 def test_handles_ollama_connection_error():
@@ -113,7 +128,7 @@ def test_verbose_flag_shows_explanation():
             return_value=LLMResponse(command="ls -lS", explanation="Lists files by size"),
         ),
     ):
-        result = runner.invoke(main, ["-v", "list", "files"], input="n\n")
+        result = runner.invoke(main, ["-v", "list", "files"], input="a\n")
 
     assert "Lists files by size" in result.output
     assert "ls -lS" in result.output
@@ -125,7 +140,7 @@ def test_verbose_flag_no_explanation():
         patch("ai_cli.cli.ensure_ready"),
         patch("ai_cli.cli.ask_llm", return_value=LLMResponse(command="ls -lS")),
     ):
-        result = runner.invoke(main, ["-v", "list", "files"], input="n\n")
+        result = runner.invoke(main, ["-v", "list", "files"], input="a\n")
 
     assert "ls -lS" in result.output
 
@@ -148,7 +163,7 @@ def test_m_flag_with_value_uses_specified_model():
         patch("ai_cli.cli.ensure_ready"),
         patch("ai_cli.cli.ask_llm", return_value=LLMResponse(command="echo hi")) as mock_llm,
     ):
-        result = runner.invoke(main, ["-m", "llama3", "say", "hi"], input="n\n")
+        result = runner.invoke(main, ["-m", "llama3", "say", "hi"], input="a\n")
 
     assert result.exit_code == 0
     mock_llm.assert_called_once()
@@ -164,7 +179,7 @@ def test_interactive_flag_picks_and_saves_model():
         patch("ai_cli.cli.ask_llm", return_value=LLMResponse(command="echo hi")) as mock_llm,
         patch("ai_cli.cli.save_config") as mock_save,
     ):
-        result = runner.invoke(main, ["--interactive", "say", "hi"], input="n\n")
+        result = runner.invoke(main, ["--interactive", "say", "hi"], input="a\n")
 
     assert result.exit_code == 0
     mock_pick.assert_called_once()
@@ -223,7 +238,7 @@ def test_big_m_flag_saves_model_after_ensure_ready():
         patch("ai_cli.cli.ask_llm", return_value=LLMResponse(command="echo hi")),
         patch("ai_cli.cli.save_config", side_effect=track_save_config),
     ):
-        result = runner.invoke(main, ["-M", "llama3", "say", "hi"], input="n\n")
+        result = runner.invoke(main, ["-M", "llama3", "say", "hi"], input="a\n")
 
     assert result.exit_code == 0
     assert call_order == ["ensure_ready", "save_config"]
@@ -252,7 +267,7 @@ def test_config_model_used_when_no_flags(tmp_path):
         patch("ai_cli.cli.load_config", return_value={"model": "mistral:latest"}),
         patch.dict(os.environ, {}, clear=True),
     ):
-        runner.invoke(main, ["say", "hi"], input="n\n")
+        runner.invoke(main, ["say", "hi"], input="a\n")
 
     assert mock_llm.call_args.kwargs.get("model") == "mistral:latest"
 
@@ -297,6 +312,6 @@ def test_env_var_overrides_config():
         patch("ai_cli.cli.load_config", return_value={"model": "mistral:latest"}),
         patch.dict(os.environ, {"AI_MODEL": "codellama:7b"}),
     ):
-        runner.invoke(main, ["say", "hi"], input="n\n")
+        runner.invoke(main, ["say", "hi"], input="a\n")
 
     assert mock_llm.call_args.kwargs.get("model") == "codellama:7b"
