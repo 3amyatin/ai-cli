@@ -70,6 +70,14 @@ context = "Projects: ~/Documents/dev/. Server: d1.example.com (Docker, SSH). Pyt
 
 The `context` field adds custom environment info to the LLM prompt, so it can generate commands tailored to your setup (server names, project paths, tool preferences).
 
+The system prompt also auto-detects your OS, architecture, shell, available tools (Homebrew, uv, Docker), working directory, and home path.
+
+All interactions are logged to `~/.config/ai-cli/history.jsonl`:
+
+```json
+{"ts": "2026-03-28T12:00:00+00:00", "task": "find large files", "model": "glm-5:cloud", "command": "find . -size +100M", "action": "execute"}
+```
+
 Environment variables:
 - `AI_MODEL` — ollama model name (overrides config file)
 - `OLLAMA_HOST` — ollama server URL (default: `http://localhost:11434`)
