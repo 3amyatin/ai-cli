@@ -32,7 +32,7 @@ def test_ask_llm_returns_command():
     assert result.explanation is None
     mock_chat.assert_called_once()
     call_kwargs = mock_chat.call_args
-    assert call_kwargs.kwargs["model"] == "qwen2.5:7b"
+    assert call_kwargs.kwargs["model"] == "glm-5:cloud"
     messages = call_kwargs.kwargs["messages"]
     assert messages[0]["role"] == "system"
     assert messages[1]["role"] == "user"

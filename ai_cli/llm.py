@@ -31,7 +31,7 @@ VERBOSE_SYSTEM_PROMPT_TEMPLATE = (
     "No markdown, no backticks."
 )
 
-DEFAULT_MODEL = "qwen2.5:7b"
+DEFAULT_MODEL = "glm-5:cloud"
 
 
 def _detect_env() -> dict[str, str]:

@@ -35,7 +35,9 @@ Setup check handles implicit `:latest` tag (e.g. `gemini-3-flash-preview` matche
 ## Config
 
 - Settings file: `~/.config/ai-cli/config.toml`
-- Priority: `-m`/`-M` flag > `-i` > `AI_MODEL` env var > config file > `qwen2.5:7b`
+- Default model: `glm-5:cloud` (cloud-hosted, fastest in benchmarks)
+- Priority: `-m`/`-M` flag > `-i` > `AI_MODEL` env var > config file > `glm-5:cloud`
+- Best local alternative: `qwen2.5:7b` (no network dependency)
 - `OLLAMA_HOST` env var (default: `http://localhost:11434`)
 
 ## Development

@@ -64,39 +64,42 @@ The tool displays the generated command and prompts: **[E]xecute** (run it), **[
 Settings are stored in `~/.config/ai-cli/config.toml`:
 
 ```toml
-model = "qwen2.5:7b"
+model = "glm-5:cloud"
 ```
 
 Environment variables:
 - `AI_MODEL` — ollama model name (overrides config file)
 - `OLLAMA_HOST` — ollama server URL (default: `http://localhost:11434`)
 
-Priority: `-m`/`-M` flag > `-i` > `AI_MODEL` env var > config file > `qwen2.5:7b`
+Priority: `-m`/`-M` flag > `-i` > `AI_MODEL` env var > config file > `glm-5:cloud`
 
 ## Alternative models
 
-The default model is `qwen2.5:7b`, but you can use any model available in ollama — both [local](https://ollama.com/search?q=coding) and [cloud-hosted](https://ollama.com/search?c=cloud) (no local GPU required).
+The default model is `glm-5:cloud` (cloud-hosted, no local GPU required). You can use any model available in ollama — both [local](https://ollama.com/search?q=coding) and [cloud-hosted](https://ollama.com/search?c=cloud).
 
 To switch the model for one run:
 
 ```bash
-ai -m gemini-3-flash-preview find large files in home directory
+ai -m qwen2.5:7b find large files in home directory
 ```
 
 To switch and save as default:
 
 ```bash
-ai -M glm-5:cloud find large files in home directory
+ai -M gemini-3-flash-preview find large files in home directory
 ```
 
-Cloud models tested with ai-cli (March 2026):
+Models tested with ai-cli (March 2026):
 
-| Model | Avg latency | Notes |
-|-------|-------------|-------|
-| `qwen2.5:7b` (local, default) | ~2s | fast, consistent |
-| `gemini-3-flash-preview` (cloud) | ~3s | fast, occasional artifacts |
-| `glm-5:cloud` | 2-21s | good quality, inconsistent latency |
-| `qwen3.5:cloud` | ~19s | good quality, slow |
+| Model | Type | Avg latency | Quality | Notes |
+|-------|------|-------------|---------|-------|
+| `glm-5:cloud` (default) | cloud | ~2s | correct | fastest, consistent |
+| `gemini-3-flash-preview` | cloud | ~3s | correct | occasional output artifacts |
+| `minimax-m2.5:cloud` | cloud | ~4s | correct | reliable |
+| `qwen2.5:7b` | local | ~4s | correct | best local, no network needed |
+| `llama3` | local | ~5s | correct | solid local alternative |
+| `deepseek-coder-v2:16b` | local | ~9s | correct | needs 9GB RAM |
+| `qwen3.5:cloud` | cloud | ~18s | correct | slow |
 
 To find the best local model for your hardware, try [llm-checker](https://github.com/Pavelevich/llm-checker):
 
