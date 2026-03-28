@@ -39,6 +39,7 @@ Setup check handles implicit `:latest` tag (e.g. `gemini-3-flash-preview` matche
 - Priority: `-m`/`-M` flag > `-i` > `AI_MODEL` env var > config file > `glm-5:cloud`
 - Best local alternative: `qwen2.5:7b` (no network dependency)
 - `context` field: custom user environment info appended to system prompt (server names, paths, preferences)
+- History log: `~/.config/ai-cli/history.jsonl` — records every interaction (task, model, command, action)
 - `OLLAMA_HOST` env var (default: `http://localhost:11434`)
 
 ## Development

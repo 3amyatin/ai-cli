@@ -1,16 +1,34 @@
 """CLI entry point for ai command."""
 
+import json
 import os
 import subprocess
 import sys
+from datetime import datetime, timezone
 
 import click
 from ollama import list as ollama_list
 
 from ai_cli import __version__
-from ai_cli.config import load_config, save_config
+from ai_cli.config import CONFIG_PATH, load_config, save_config
 from ai_cli.llm import DEFAULT_MODEL, ask_llm
 from ai_cli.setup import ensure_ready
+
+HISTORY_PATH = CONFIG_PATH.parent / "history.jsonl"
+
+
+def _log_history(task: str, model: str, command: str, action: str) -> None:
+    """Append an entry to the history log."""
+    entry = {
+        "ts": datetime.now(timezone.utc).isoformat(),
+        "task": task,
+        "model": model,
+        "command": command,
+        "action": action,
+    }
+    HISTORY_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with open(HISTORY_PATH, "a") as f:
+        f.write(json.dumps(entry) + "\n")
 
 
 def _pick_model() -> str:
@@ -121,10 +139,13 @@ def main(
         show_choices=False,
     )
     if choice == "e":
+        _log_history(task_str, model, command, "execute")
         result = subprocess.run(command, shell=True)
         sys.exit(result.returncode)
     elif choice == "c":
+        _log_history(task_str, model, command, "copy")
         subprocess.run(["pbcopy"], input=command.encode(), check=True)
         click.secho("Copied to clipboard.", fg="green")
     else:
+        _log_history(task_str, model, command, "abort")
         click.echo("Aborted.")

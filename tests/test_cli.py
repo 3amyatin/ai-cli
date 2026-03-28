@@ -107,6 +107,46 @@ def test_copy_to_clipboard():
     mock_run.assert_called_once_with(["pbcopy"], input=b"find . -name '*.py'", check=True)
 
 
+def test_history_logged_on_execute(tmp_path):
+    import json
+
+    history_path = tmp_path / "history.jsonl"
+    runner = CliRunner()
+    with (
+        patch("ai_cli.cli.ensure_ready"),
+        patch("ai_cli.cli.ask_llm", return_value=LLMResponse(command="echo hi")),
+        patch("ai_cli.cli.subprocess.run") as mock_run,
+        patch("ai_cli.cli.HISTORY_PATH", history_path),
+    ):
+        mock_run.return_value = MagicMock(returncode=0)
+        runner.invoke(main, ["say", "hi"], input="e\n")
+
+    entries = [json.loads(line) for line in history_path.read_text().splitlines()]
+    assert len(entries) == 1
+    assert entries[0]["task"] == "say hi"
+    assert entries[0]["command"] == "echo hi"
+    assert entries[0]["action"] == "execute"
+    assert "ts" in entries[0]
+    assert "model" in entries[0]
+
+
+def test_history_logged_on_abort(tmp_path):
+    import json
+
+    history_path = tmp_path / "history.jsonl"
+    runner = CliRunner()
+    with (
+        patch("ai_cli.cli.ensure_ready"),
+        patch("ai_cli.cli.ask_llm", return_value=LLMResponse(command="rm -rf /")),
+        patch("ai_cli.cli.HISTORY_PATH", history_path),
+    ):
+        runner.invoke(main, ["delete", "everything"], input="a\n")
+
+    entries = [json.loads(line) for line in history_path.read_text().splitlines()]
+    assert len(entries) == 1
+    assert entries[0]["action"] == "abort"
+
+
 def test_handles_ollama_connection_error():
     runner = CliRunner()
     with (
