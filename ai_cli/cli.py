@@ -11,7 +11,7 @@ from ollama import list as ollama_list
 from ai_cli import __version__
 from ai_cli.config import CONFIG_PATH, save_config
 from ai_cli.llm import ask_llm
-from ai_cli.setup import ensure_ready
+from ai_cli.setup import ensure_ready, ensure_server
 
 HISTORY_PATH = CONFIG_PATH.parent / "history.jsonl"
 
@@ -111,7 +111,8 @@ def main(
         return
     task_str = " ".join(task)
 
-    # For explicit model flags, still ensure_ready
+    # Always ensure server is running; check specific model if explicit
+    ensure_server()
     if model is not None:
         ensure_ready(model)
 

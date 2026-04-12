@@ -20,20 +20,10 @@ def _fmt_size(size_bytes: int | float) -> str:
     return f"{size_bytes:.1f} PB"
 
 
-def ensure_ready(model: str) -> None:
-    """Ensure ollama server is reachable and the target model is available.
-
-    Steps:
-    1. Check ollama server connectivity via ollama.list()
-    2. On ConnectionError: check if ollama binary exists on PATH
-       - Missing binary → print install instructions, exit(1)
-       - Binary present but server down → suggest `ollama serve`, exit(1)
-    3. Check if target model is in the installed models list
-    4. If model missing → auto-pull with progress output
-    """
-    # Step 1-2: Check server connectivity, auto-start if needed
+def ensure_server() -> None:
+    """Ensure ollama server is reachable, auto-starting if needed."""
     try:
-        response = ollama_list()
+        ollama_list()
     except ConnectionError:
         if shutil_which("ollama") is None:
             click.secho(
@@ -53,7 +43,7 @@ def ensure_ready(model: str) -> None:
         for _ in range(10):
             time.sleep(1)
             try:
-                response = ollama_list()
+                ollama_list()
                 break
             except ConnectionError:
                 continue
@@ -61,7 +51,18 @@ def ensure_ready(model: str) -> None:
             click.secho("ollama failed to start", fg="red", err=True)
             sys.exit(1)
 
-    # Step 3: Check if model is already available
+
+def ensure_ready(model: str) -> None:
+    """Ensure ollama server is reachable and the target model is available."""
+    ensure_server()
+
+    try:
+        response = ollama_list()
+    except ConnectionError:
+        click.secho("ollama is not running", fg="red", err=True)
+        sys.exit(1)
+
+    # Check if model is already available
     installed = {m.model for m in response.models}
     if model in installed:
         return

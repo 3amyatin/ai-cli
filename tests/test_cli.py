@@ -18,6 +18,7 @@ def test_version_flag():
 def test_verbose_long_flag():
     runner = CliRunner()
     with (
+        patch("ai_cli.cli.ensure_server"),
         patch("ai_cli.cli.ensure_ready"),
         patch("ai_cli.cli.ask_llm", return_value=LLMResponse(command="ls -la")),
     ):
@@ -30,6 +31,7 @@ def test_verbose_long_flag():
 def test_generates_and_displays_command():
     runner = CliRunner()
     with (
+        patch("ai_cli.cli.ensure_server"),
         patch("ai_cli.cli.ensure_ready"),
         patch("ai_cli.cli.ask_llm", return_value=LLMResponse(command="ls -la /tmp")),
     ):
@@ -42,6 +44,7 @@ def test_generates_and_displays_command():
 def test_executes_on_confirmation():
     runner = CliRunner()
     with (
+        patch("ai_cli.cli.ensure_server"),
         patch("ai_cli.cli.ensure_ready"),
         patch("ai_cli.cli.ask_llm", return_value=LLMResponse(command="echo hello")),
         patch("ai_cli.cli.subprocess.run") as mock_run,
@@ -56,6 +59,7 @@ def test_executes_on_confirmation():
 def test_aborts_on_decline():
     runner = CliRunner()
     with (
+        patch("ai_cli.cli.ensure_server"),
         patch("ai_cli.cli.ensure_ready"),
         patch("ai_cli.cli.ask_llm", return_value=LLMResponse(command="rm -rf /")),
     ):
@@ -68,6 +72,7 @@ def test_aborts_on_decline():
 def test_handles_empty_llm_response():
     runner = CliRunner()
     with (
+        patch("ai_cli.cli.ensure_server"),
         patch("ai_cli.cli.ensure_ready"),
         patch("ai_cli.cli.ask_llm", return_value=None),
     ):
@@ -81,6 +86,7 @@ def test_execute_default_is_execute():
     """Pressing Enter without input should execute the command (default=e)."""
     runner = CliRunner()
     with (
+        patch("ai_cli.cli.ensure_server"),
         patch("ai_cli.cli.ensure_ready"),
         patch("ai_cli.cli.ask_llm", return_value=LLMResponse(command="echo test")),
         patch("ai_cli.cli.subprocess.run") as mock_run,
@@ -95,6 +101,7 @@ def test_execute_default_is_execute():
 def test_copy_to_clipboard():
     runner = CliRunner()
     with (
+        patch("ai_cli.cli.ensure_server"),
         patch("ai_cli.cli.ensure_ready"),
         patch("ai_cli.cli.ask_llm", return_value=LLMResponse(command="find . -name '*.py'")),
         patch("ai_cli.cli.subprocess.run") as mock_run,
@@ -113,6 +120,7 @@ def test_history_logged_on_execute(tmp_path):
     history_path = tmp_path / "history.jsonl"
     runner = CliRunner()
     with (
+        patch("ai_cli.cli.ensure_server"),
         patch("ai_cli.cli.ensure_ready"),
         patch("ai_cli.cli.ask_llm", return_value=LLMResponse(command="echo hi")),
         patch("ai_cli.cli.subprocess.run") as mock_run,
@@ -136,6 +144,7 @@ def test_history_logged_on_abort(tmp_path):
     history_path = tmp_path / "history.jsonl"
     runner = CliRunner()
     with (
+        patch("ai_cli.cli.ensure_server"),
         patch("ai_cli.cli.ensure_ready"),
         patch("ai_cli.cli.ask_llm", return_value=LLMResponse(command="rm -rf /")),
         patch("ai_cli.cli.HISTORY_PATH", history_path),
@@ -150,6 +159,7 @@ def test_history_logged_on_abort(tmp_path):
 def test_handles_ollama_connection_error():
     runner = CliRunner()
     with (
+        patch("ai_cli.cli.ensure_server"),
         patch("ai_cli.cli.ensure_ready"),
         patch("ai_cli.cli.ask_llm", side_effect=Exception("Connection refused")),
     ):
@@ -162,6 +172,7 @@ def test_handles_ollama_connection_error():
 def test_verbose_flag_shows_explanation():
     runner = CliRunner()
     with (
+        patch("ai_cli.cli.ensure_server"),
         patch("ai_cli.cli.ensure_ready"),
         patch(
             "ai_cli.cli.ask_llm",
@@ -177,6 +188,7 @@ def test_verbose_flag_shows_explanation():
 def test_verbose_flag_no_explanation():
     runner = CliRunner()
     with (
+        patch("ai_cli.cli.ensure_server"),
         patch("ai_cli.cli.ensure_ready"),
         patch("ai_cli.cli.ask_llm", return_value=LLMResponse(command="ls -lS")),
     ):
@@ -188,6 +200,7 @@ def test_verbose_flag_no_explanation():
 def test_verbose_flag_none_response():
     runner = CliRunner()
     with (
+        patch("ai_cli.cli.ensure_server"),
         patch("ai_cli.cli.ensure_ready"),
         patch("ai_cli.cli.ask_llm", return_value=None),
     ):
@@ -200,6 +213,7 @@ def test_verbose_flag_none_response():
 def test_m_flag_with_value_uses_specified_model():
     runner = CliRunner()
     with (
+        patch("ai_cli.cli.ensure_server"),
         patch("ai_cli.cli.ensure_ready"),
         patch("ai_cli.cli.ask_llm", return_value=LLMResponse(command="echo hi")) as mock_llm,
     ):
@@ -214,6 +228,7 @@ def test_interactive_flag_picks_and_saves_model():
     """--interactive invokes _pick_model and saves the choice."""
     runner = CliRunner()
     with (
+        patch("ai_cli.cli.ensure_server"),
         patch("ai_cli.cli.ensure_ready"),
         patch("ai_cli.cli._pick_model", return_value="qwen2.5:7b") as mock_pick,
         patch("ai_cli.cli.ask_llm", return_value=LLMResponse(command="echo hi")) as mock_llm,
@@ -314,6 +329,7 @@ def test_interactive_flag_without_task_saves_and_exits():
     """ai -i (no task) picks model, saves it, and exits without error."""
     runner = CliRunner()
     with (
+        patch("ai_cli.cli.ensure_server"),
         patch("ai_cli.cli.ensure_ready"),
         patch("ai_cli.cli._pick_model", return_value="llama3:latest") as mock_pick,
         patch("ai_cli.cli.save_config") as mock_save,
@@ -330,6 +346,7 @@ def test_big_m_flag_without_task_saves_and_exits():
     """ai -M model (no task) saves model and exits without error."""
     runner = CliRunner()
     with (
+        patch("ai_cli.cli.ensure_server"),
         patch("ai_cli.cli.ensure_ready"),
         patch("ai_cli.cli.save_config") as mock_save,
     ):

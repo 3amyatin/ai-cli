@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from ai_cli.setup import ensure_ready
+from ai_cli.setup import ensure_ready, ensure_server
 
 
 @pytest.fixture()
@@ -58,14 +58,11 @@ def test_connection_error_binary_missing_exits_with_1(_mock_list, _mock_which):
 @patch("ai_cli.setup.ollama_list")
 def test_auto_starts_ollama_when_binary_exists(mock_list, _mock_which, mock_popen, _mock_sleep):
     """When ollama binary exists but server down, auto-start it."""
-    mock_model = MagicMock()
-    mock_model.model = "qwen2.5:7b"
     success_resp = MagicMock()
-    success_resp.models = [mock_model]
-    # First call fails, second succeeds (after auto-start)
+    success_resp.models = []
     mock_list.side_effect = [ConnectionError("refused"), success_resp]
 
-    ensure_ready("qwen2.5:7b")
+    ensure_server()
 
     mock_popen.assert_called_once()
     assert mock_popen.call_args[0][0] == ["ollama", "serve"]
@@ -78,7 +75,7 @@ def test_auto_starts_ollama_when_binary_exists(mock_list, _mock_which, mock_pope
 def test_auto_start_fails_after_retries(_mock_list, _mock_which, _mock_popen, _mock_sleep):
     """If ollama doesn't start after retries, exit(1)."""
     with pytest.raises(SystemExit) as exc_info:
-        ensure_ready("qwen2.5:7b")
+        ensure_server()
 
     assert exc_info.value.code == 1
 
@@ -90,13 +87,11 @@ def test_auto_start_fails_after_retries(_mock_list, _mock_which, _mock_popen, _m
 def test_auto_start_prints_starting_message(
     mock_list, _mock_which, _mock_popen, _mock_sleep, capsys
 ):
-    mock_model = MagicMock()
-    mock_model.model = "qwen2.5:7b"
     success_resp = MagicMock()
-    success_resp.models = [mock_model]
+    success_resp.models = []
     mock_list.side_effect = [ConnectionError("refused"), success_resp]
 
-    ensure_ready("qwen2.5:7b")
+    ensure_server()
 
     output = capsys.readouterr().err
     assert "starting ollama" in output
