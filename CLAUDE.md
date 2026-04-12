@@ -36,11 +36,17 @@ Setup check handles implicit `:latest` tag (e.g. `gemini-3-flash-preview` matche
 
 - Settings file: `~/.config/ai-cli/config.toml`
 - Default model: `glm-5:cloud` (cloud-hosted, fastest in benchmarks)
-- Priority: `-m`/`-M` flag > `-i` > `AI_MODEL` env var > config file > `glm-5:cloud`
+- Model priority: `-m`/`-M` flag > `-i` > `AI_MODEL` env var > first available from `models` list > `model` field > `glm-5:cloud`
 - Best local alternative: `qwen2.5:7b` (no network dependency)
+- `models` field: ordered list of models by priority; first available (installed) model is used
+- `model` field: single fallback model (used when no models from list are available)
+- `timeout` field: per-model timeout in seconds (default: 20)
+- `system_prompt` field: custom system prompt template with placeholders `{os}`, `{arch}`, `{shell}`, `{env_context}`
+- `verbose_system_prompt` field: custom prompt for verbose mode (same placeholders)
 - `context` field: custom user environment info appended to system prompt (server names, paths, preferences)
 - History log: `~/.config/ai-cli/history.jsonl` — records every interaction (task, model, command, action)
 - `OLLAMA_HOST` env var (default: `http://localhost:11434`)
+- Always prints "using <model>" to stderr before calling LLM
 
 ## Development
 

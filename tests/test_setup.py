@@ -54,9 +54,7 @@ def test_connection_error_binary_missing_exits_with_1(_mock_list, _mock_which):
 
 @patch("ai_cli.setup.shutil_which", return_value="/usr/local/bin/ollama")
 @patch("ai_cli.setup.ollama_list", side_effect=ConnectionError("connection refused"))
-def test_connection_error_binary_exists_prints_serve_suggestion(
-    _mock_list, _mock_which, capsys
-):
+def test_connection_error_binary_exists_prints_serve_suggestion(_mock_list, _mock_which, capsys):
     with pytest.raises(SystemExit) as exc_info:
         ensure_ready("qwen2.5:7b")
 

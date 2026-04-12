@@ -89,9 +89,7 @@ def ensure_ready(model: str) -> None:
                         fg="red",
                         err=True,
                     )
-                    if not click.confirm(
-                        "Continue downloading?", default=False, err=True
-                    ):
+                    if not click.confirm("Continue downloading?", default=False, err=True):
                         click.secho("Aborted.", fg="red", err=True)
                         sys.exit(1)
                     ram_warned = True

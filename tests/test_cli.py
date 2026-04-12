@@ -298,18 +298,16 @@ def test_big_m_flag_does_not_save_if_ensure_ready_fails():
 
 
 def test_config_model_used_when_no_flags(tmp_path):
-    """Config file model is used when no -m/-M and no AI_MODEL env."""
+    """When no -m/-M flags, model=None is passed to ask_llm (resolution happens there)."""
     runner = CliRunner()
 
     with (
-        patch("ai_cli.cli.ensure_ready"),
         patch("ai_cli.cli.ask_llm", return_value=LLMResponse(command="echo hi")) as mock_llm,
-        patch("ai_cli.cli.load_config", return_value={"model": "mistral:latest"}),
         patch.dict(os.environ, {}, clear=True),
     ):
         runner.invoke(main, ["say", "hi"], input="a\n")
 
-    assert mock_llm.call_args.kwargs.get("model") == "mistral:latest"
+    assert mock_llm.call_args.kwargs.get("model") is None
 
 
 def test_interactive_flag_without_task_saves_and_exits():
@@ -343,15 +341,14 @@ def test_big_m_flag_without_task_saves_and_exits():
 
 
 def test_env_var_overrides_config():
-    """AI_MODEL env var takes priority over config file."""
+    """AI_MODEL env var resolution now happens inside ask_llm, not cli."""
     runner = CliRunner()
 
     with (
-        patch("ai_cli.cli.ensure_ready"),
         patch("ai_cli.cli.ask_llm", return_value=LLMResponse(command="echo hi")) as mock_llm,
-        patch("ai_cli.cli.load_config", return_value={"model": "mistral:latest"}),
         patch.dict(os.environ, {"AI_MODEL": "codellama:7b"}),
     ):
         runner.invoke(main, ["say", "hi"], input="a\n")
 
-    assert mock_llm.call_args.kwargs.get("model") == "codellama:7b"
+    # CLI passes model=None; ask_llm internally resolves AI_MODEL
+    assert mock_llm.call_args.kwargs.get("model") is None

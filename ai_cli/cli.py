@@ -1,7 +1,6 @@
 """CLI entry point for ai command."""
 
 import json
-import os
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -10,8 +9,8 @@ import click
 from ollama import list as ollama_list
 
 from ai_cli import __version__
-from ai_cli.config import CONFIG_PATH, load_config, save_config
-from ai_cli.llm import DEFAULT_MODEL, ask_llm
+from ai_cli.config import CONFIG_PATH, save_config
+from ai_cli.llm import ask_llm
 from ai_cli.setup import ensure_ready
 
 HISTORY_PATH = CONFIG_PATH.parent / "history.jsonl"
@@ -89,7 +88,7 @@ def main(
     verbose: bool,
 ) -> None:
     """Generate a bash command from a natural language description."""
-    # Resolve model: -m/-M flag > -i interactive > AI_MODEL env > config > default
+    # Resolve model: -m/-M flag > -i interactive > None (let ask_llm resolve)
     save_after_ready = False
     if model_save is not None:
         model = model_save
@@ -100,8 +99,7 @@ def main(
         model = _pick_model()
         save_after_ready = True
     else:
-        config = load_config()
-        model = os.environ.get("AI_MODEL", config.get("model", DEFAULT_MODEL))
+        model = None  # Let ask_llm handle resolution (env > config models > config model > default)
 
     if not task:
         if save_after_ready:
@@ -113,7 +111,9 @@ def main(
         return
     task_str = " ".join(task)
 
-    ensure_ready(model)
+    # For explicit model flags, still ensure_ready
+    if model is not None:
+        ensure_ready(model)
 
     if save_after_ready:
         save_config({"model": model})
@@ -130,6 +130,9 @@ def main(
         click.secho(f"Error: {e}", fg="red", err=True)
         sys.exit(1)
 
+    # For history logging, use the model that was actually used
+    log_model = model or "auto"
+
     click.secho(f"\n  {command}\n", fg="yellow", bold=True)
 
     choice = click.prompt(
@@ -139,13 +142,13 @@ def main(
         show_choices=False,
     )
     if choice == "e":
-        _log_history(task_str, model, command, "execute")
+        _log_history(task_str, log_model, command, "execute")
         result = subprocess.run(command, shell=True)
         sys.exit(result.returncode)
     elif choice == "c":
-        _log_history(task_str, model, command, "copy")
+        _log_history(task_str, log_model, command, "copy")
         subprocess.run(["pbcopy"], input=command.encode(), check=True)
         click.secho("Copied to clipboard.", fg="green")
     else:
-        _log_history(task_str, model, command, "abort")
+        _log_history(task_str, log_model, command, "abort")
         click.echo("Aborted.")

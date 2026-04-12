@@ -6,9 +6,18 @@ import re
 import shutil
 from typing import NamedTuple
 
-from ollama import chat
+import click
+from ollama import Client
+from ollama import list as ollama_list
 
-from ai_cli.config import load_config
+from ai_cli.config import (
+    DEFAULT_SYSTEM_PROMPT,
+    DEFAULT_VERBOSE_SYSTEM_PROMPT,
+    get_models,
+    get_system_prompt,
+    get_timeout,
+    load_config,
+)
 
 
 class LLMResponse(NamedTuple):
@@ -17,24 +26,6 @@ class LLMResponse(NamedTuple):
     command: str
     explanation: str | None = None
 
-SYSTEM_PROMPT_TEMPLATE = (
-    "You are a terminal assistant. "
-    "The user's system: {os} ({arch}), shell: {shell}. "
-    "{env_context}"
-    "Answer ONLY with a shell command for this system — single line. "
-    "No explanations, no markdown, no backticks."
-)
-
-VERBOSE_SYSTEM_PROMPT_TEMPLATE = (
-    "You are a terminal assistant. "
-    "The user's system: {os} ({arch}), shell: {shell}. "
-    "{env_context}"
-    "First explain briefly what the command does, then give the command. "
-    "Format your response exactly as:\n"
-    "EXPLANATION: <brief explanation>\n"
-    "COMMAND: <single line shell command>\n"
-    "No markdown, no backticks."
-)
 
 DEFAULT_MODEL = "glm-5:cloud"
 
@@ -100,16 +91,67 @@ def _parse_verbose_response(content: str) -> LLMResponse:
     return LLMResponse(command=command, explanation=explanation)
 
 
-def ask_llm(
-    task: str, model: str | None = None, verbose: bool = False
-) -> LLMResponse | None:
-    """Ask ollama to generate a shell command for the given task."""
-    model = model or os.environ.get("AI_MODEL", DEFAULT_MODEL)
-    template = VERBOSE_SYSTEM_PROMPT_TEMPLATE if verbose else SYSTEM_PROMPT_TEMPLATE
-    system_prompt = template.format(**_detect_env())
+def _resolve_model(explicit_model: str | None = None) -> str:
+    """Resolve which model to use.
 
-    response = chat(
-        model=model,
+    Priority: explicit_model > AI_MODEL env > first available from config models list > config model > default.
+    """
+    if explicit_model:
+        return explicit_model
+
+    env_model = os.environ.get("AI_MODEL")
+    if env_model:
+        return env_model
+
+    config = load_config()
+
+    # Try models list (priority order) — pick first available
+    models_list = get_models(config)
+    if models_list:
+        available = _get_available_models()
+        if available is not None:
+            for m in models_list:
+                if m in available or (":" not in m and f"{m}:latest" in available):
+                    return m
+            # None available from list — fall through to single model / default
+
+    return config.get("model", DEFAULT_MODEL)
+
+
+def _get_available_models() -> set[str] | None:
+    """Get set of installed model names, or None if server unreachable."""
+    try:
+        response = ollama_list()
+        return {m.model for m in response.models}
+    except ConnectionError:
+        return None
+
+
+def ask_llm(task: str, model: str | None = None, verbose: bool = False) -> LLMResponse | None:
+    """Ask ollama to generate a shell command for the given task."""
+    resolved_model = _resolve_model(model)
+
+    # Print which model we're using
+    click.secho(f"using {resolved_model}", fg="bright_black", err=True)
+
+    config = load_config()
+    timeout = get_timeout(config)
+
+    # Build system prompt
+    custom_prompt = get_system_prompt(config, verbose=verbose)
+    if custom_prompt:
+        template = custom_prompt
+    elif verbose:
+        template = DEFAULT_VERBOSE_SYSTEM_PROMPT
+    else:
+        template = DEFAULT_SYSTEM_PROMPT
+
+    env = _detect_env()
+    system_prompt = template.format(**env)
+
+    client = Client(timeout=timeout)
+    response = client.chat(
+        model=resolved_model,
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": task},
