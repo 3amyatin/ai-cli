@@ -1,6 +1,8 @@
 """Ollama readiness checks: server reachable, model available."""
 
+import subprocess
 import sys
+import time
 from shutil import which as shutil_which
 
 import click
@@ -29,7 +31,7 @@ def ensure_ready(model: str) -> None:
     3. Check if target model is in the installed models list
     4. If model missing → auto-pull with progress output
     """
-    # Step 1-2: Check server connectivity
+    # Step 1-2: Check server connectivity, auto-start if needed
     try:
         response = ollama_list()
     except ConnectionError:
@@ -39,13 +41,25 @@ def ensure_ready(model: str) -> None:
                 fg="red",
                 err=True,
             )
+            sys.exit(1)
+
+        click.secho("starting ollama...", fg="bright_black", err=True)
+        subprocess.Popen(
+            ["ollama", "serve"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        # Wait for server to become ready
+        for _ in range(10):
+            time.sleep(1)
+            try:
+                response = ollama_list()
+                break
+            except ConnectionError:
+                continue
         else:
-            click.secho(
-                "ollama is not running. Start it with: ollama serve",
-                fg="red",
-                err=True,
-            )
-        sys.exit(1)
+            click.secho("ollama failed to start", fg="red", err=True)
+            sys.exit(1)
 
     # Step 3: Check if model is already available
     installed = {m.model for m in response.models}

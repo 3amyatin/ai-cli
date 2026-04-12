@@ -49,27 +49,57 @@ def test_connection_error_binary_missing_exits_with_1(_mock_list, _mock_which):
     assert exc_info.value.code == 1
 
 
-# --- Connection failure: binary exists but server not running ---
+# --- Connection failure: binary exists → auto-start ---
 
 
+@patch("ai_cli.setup.time.sleep")
+@patch("ai_cli.setup.subprocess.Popen")
 @patch("ai_cli.setup.shutil_which", return_value="/usr/local/bin/ollama")
-@patch("ai_cli.setup.ollama_list", side_effect=ConnectionError("connection refused"))
-def test_connection_error_binary_exists_prints_serve_suggestion(_mock_list, _mock_which, capsys):
+@patch("ai_cli.setup.ollama_list")
+def test_auto_starts_ollama_when_binary_exists(mock_list, _mock_which, mock_popen, _mock_sleep):
+    """When ollama binary exists but server down, auto-start it."""
+    mock_model = MagicMock()
+    mock_model.model = "qwen2.5:7b"
+    success_resp = MagicMock()
+    success_resp.models = [mock_model]
+    # First call fails, second succeeds (after auto-start)
+    mock_list.side_effect = [ConnectionError("refused"), success_resp]
+
+    ensure_ready("qwen2.5:7b")
+
+    mock_popen.assert_called_once()
+    assert mock_popen.call_args[0][0] == ["ollama", "serve"]
+
+
+@patch("ai_cli.setup.time.sleep")
+@patch("ai_cli.setup.subprocess.Popen")
+@patch("ai_cli.setup.shutil_which", return_value="/usr/local/bin/ollama")
+@patch("ai_cli.setup.ollama_list", side_effect=ConnectionError("refused"))
+def test_auto_start_fails_after_retries(_mock_list, _mock_which, _mock_popen, _mock_sleep):
+    """If ollama doesn't start after retries, exit(1)."""
     with pytest.raises(SystemExit) as exc_info:
         ensure_ready("qwen2.5:7b")
 
     assert exc_info.value.code == 1
+
+
+@patch("ai_cli.setup.time.sleep")
+@patch("ai_cli.setup.subprocess.Popen")
+@patch("ai_cli.setup.shutil_which", return_value="/usr/local/bin/ollama")
+@patch("ai_cli.setup.ollama_list")
+def test_auto_start_prints_starting_message(
+    mock_list, _mock_which, _mock_popen, _mock_sleep, capsys
+):
+    mock_model = MagicMock()
+    mock_model.model = "qwen2.5:7b"
+    success_resp = MagicMock()
+    success_resp.models = [mock_model]
+    mock_list.side_effect = [ConnectionError("refused"), success_resp]
+
+    ensure_ready("qwen2.5:7b")
+
     output = capsys.readouterr().err
-    assert "ollama serve" in output
-
-
-@patch("ai_cli.setup.shutil_which", return_value="/usr/local/bin/ollama")
-@patch("ai_cli.setup.ollama_list", side_effect=ConnectionError("connection refused"))
-def test_connection_error_binary_exists_exits_with_1(_mock_list, _mock_which):
-    with pytest.raises(SystemExit) as exc_info:
-        ensure_ready("qwen2.5:7b")
-
-    assert exc_info.value.code == 1
+    assert "starting ollama" in output
 
 
 # --- Connected, model already present ---
